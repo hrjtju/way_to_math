@@ -203,8 +203,86 @@ $$假如 $m=n$，就得到 $\displaystyle E(A_{n}^{2}) = \int_{0}^{1} \psi_{n}^{
 W(t) \coloneqq \int_{0}^{t} \xi(s) \, \mathrm{d}s = \sum\limits_{n=0}^{\infty} A_{n} \int_{0}^{t} \psi_{n}(s) \, \mathrm{d}s.  
 $$下面我们会选一个比较好的基，然后证明上面的积分收敛。
 
+> **注解 3.4**
+> 通过白噪声的性质我们并不能判定其做 Fourier 变换后的随机变量系数是服从标准正态分布的，但标准正态分布是使得后续推导较为简单，且比较自然的选择
+> （把 $\xi(\cdot)$ 看成一个泛函，Fourier 变换做的就是某种 “对角化”）
+
+
 ### 3.3.2 Brown 运动的构造
 
+接下来给出的 Brown 运动的构造属于 Levy 和 Ciesielski。
+
+> **定义 3.5 （Haar 小波基）**
+> Haar 小波基 $\{ h_{k}(\cdot) \}_{k=0}^{\infty}$ 是指下面这些函数：$$\begin{align}h_{0}(t) &\coloneqq 1 & 0 \leqslant t \leqslant 1\\h_{1}(t) &\coloneqq \begin{cases}\displaystyle 1 & \displaystyle 0 \leqslant t \leqslant \frac{1}{2}\\\displaystyle -1 & \displaystyle \frac{1}{2} < t \leqslant 1\end{cases}\\h_{k}(t) &\coloneqq \begin{cases}\displaystyle 2^{n/2} & \displaystyle \frac{k-2^{n}}{2^{n}} \leqslant t \leqslant \frac{k-2^{n}+1/2}{2^{n}}\\\displaystyle -2^{n/2} &\displaystyle  \frac{k-2^{n}+1/2}{2^{n}} \leqslant t \leqslant \frac{k-2^{n}+1}{2^{n}}\\0 & \text{otherwise}\end{cases} & 2^{n} \leqslant k \leqslant 2^{n+1}, n = 1, 2, \dots\end{align}$$
+
+接下来我们验证 $\{ h_{k}(\cdot) \}_{k=1}^{\infty}$ 是 $L^{2}(0, 1)$ 上的一个性质很好的正交基。
+
+> **引理 3.6 （Haar 基是 $L^{2}(0, 1)$ 的完备标准正交基）**
+> Haar 小波基 $\{ h_{k}(\cdot) \}_{k=0}^{\infty}$ 是 $L^{2}(0, 1)$ 的一个完备的标准正交基
+
+**证明.**
+首先验证标准（normal）的部分。$h_{0}$ 和 $h_{1}$ 显然符合条件。
+$$
+\left\langle h_{k}, h_{k} \right\rangle_{L^{2}(0, 1)} = \int_{0}^{1} [h_{k}(t)]^{2} \, \mathrm{d}t= 2^{n/2} \cdot 2^{n/2} \cdot \frac{1}{2^{n}} \equiv 1
+$$
+接下来验证正交（ortho-）的部分。注意如果 $l > k$ 那么 $h_{l}$ 的支撑集下 $h_{k}$ 总是常数。因此 $$
+\int_{0}^{1} h_{k}(t)h_{l}(t)  \, \mathrm{d}t = \pm 2^{n/2} \int_{0}^{1} h_{l}(t) \, \mathrm{d}t \equiv 0 
+$$
+最后证明完备性。我们需要证明，对 $k = 0, 1, \dots$ 和 $f \in L^{2}(0, 1)$，有 $$\int_{0}^{1} f(t)h_{k}(t) \, \mathrm{d} t = 0 \iff f = 0\quad \text{a.e.}$$当 $n=0$ 时，有 $\displaystyle \int_{0}^{1} f(t) \, \mathrm{d}t = 0$。
+当 $n=1$ 时，有 $\displaystyle\int_{0}^{1/2} f \, \mathrm{d}t = \int_{1/2}^{1} f \, \mathrm{d}t$；结合 $n=0$ 的情况，我们有 $\displaystyle\int_{0}^{1/2} f \, \mathrm{d}t = \int_{1/2}^{1} f \, \mathrm{d}t = 0$。
+接着这样做下去，我们能得到对所有 $0 \leqslant k \leqslant 2^{k+{1}}$，都有 $\displaystyle \int_{k/2^{n+1}}^{(k+1)/2^{n+1}} f \, \mathrm{d}t = 0$。因此对所有的二进制有理数 $0 \leqslant s \leqslant r \leqslant 1$，有 $\displaystyle\int_{s}^{r} f \, \mathrm{d}t = 0$，这说明 $f$ 几乎处处为零，因为 $[0, 1]$ 上的任意区间 $[a, b]$ 都可以使用二进制有理数逼近。
+
+
+> **定义 3.7 （Schauder 函数）**
+> 对 $k = 0, 1, 2, \dots$ 定义 $k$ 阶 Schauder 函数为 $$s_{k}(t) \coloneqq \int_{0}^{t} h_{k}(s) \, \mathrm{d}s\quad 0 \leqslant t \leqslant 1 $$
+
+我们马上揭示 Schauder 函数和 Brown 运动之间的关系。
+
+> **引理 3.8**
+> 对任意 $0 \leqslant s, t \leqslant 1$，有 $$\sum\limits_{k=0}^{\infty} s_{k}(s)s_{k}(t) = t \wedge s$$
+
+**证明.**
+对 $0 \leqslant s \leqslant 1$，定义 $$\phi_{s}(\tau) = \begin{cases}
+1, &0 \leqslant \tau \leqslant s\\
+0, & s < \tau \leqslant 1.
+\end{cases}$$
+不妨设 $0 \leqslant s \leqslant t \leqslant 1$，根据 Haar 小波基的完备性，可以将 $\phi_{s}$ 和 $\phi_{t}$ 做 Fourier 变换（小波变换），然后用内积线性性和一些实分析结果（在此原书中未提及，后续将陆续补充，现在先不严谨的空在这里）求和号从内积里面扯出来，接下来就简单了
+$$
+\begin{align}
+s &= \int_{0}^{s} 1 \, \mathrm{d}s = \int_{0}^{1} \phi_{s}\phi_{t} \, \mathrm{d}\tau\\
+&= \left\langle \phi_{s}, \phi_{t} \right\rangle_{L^{2}(0, 1)} = \left\langle \sum\limits_{k=0}^{\infty} a_{k}h_{k}, \sum\limits_{n=0}^{\infty} b_{n}h_{n} \right\rangle_{L^{2}(0, 1)} = \sum\limits_{k=0}^{\infty} \sum\limits_{n=0}^{\infty} a_{k}b_{n}{\color{red} \left\langle h_{k}, h_{n} \right\rangle_{L^{2}(0, 1)} } \\
+&= \sum\limits_{k=0}^{\infty} a_{k}b_{k} \cdot {\color{red} 1} = \sum\limits_{k=0}^{\infty} a_{k}b_{k}
+\end{align}
+$$
+其中 $a_{k}$ 和 $b_{k}$ 就分别是 $\phi_{s}$ 和 $\phi_{t}$ 到 Haar 小波基函数的投影，而且恰好就是我们要的 Schauder 函数： $$\begin{align}
+a_{k} &= \int_{0}^{1} \phi_{s}h_{k} \, \mathrm{d}\tau = \int_{0}^{s} h_{k} \, \mathrm{d}\tau = s_{k}(s),\\
+b_{k} &= \int_{0}^{1} \phi_{t}h_{k} \, \mathrm{d}\tau = \int_{0}^{t} h_{k} \, \mathrm{d}\tau = s_{k}(t).
+\end{align}$$这样我们就证明了这个引理。
+
+Schauder 函数 $s_{k}$ 的这个性质让我们想起 Brown 运动，因为它满足 $E(W(t)W(s)) = t \wedge s$。假设 $W(\cdot)$ 真的可以写成 $\displaystyle \sum\limits_{k=0}^{\infty} A_{k}s_{k}(t)$，我们可以检查一下。
+$$
+\begin{align}
+E(W(t)W(s)) &= E\left[ \left( \sum\limits_{k=0}^{\infty} A_{k}s_{k}(t) \right)\left( \sum\limits_{n=0}^{\infty} A_{n}s_{n}(s) \right) \right]\\
+&= \sum\limits_{k=0}^{\infty} \sum\limits_{n=0}^{\infty} s_{k}(t)s_{n}(s) {\color{red} E(A_{k}A_{n}) } \\
+&= \sum\limits_{k=0}^{\infty} s_{k}(t)s_{k}(s) = t \wedge s
+\end{align}
+$$
+我们似乎走在正确的路上。下一个问题就是级数 $\displaystyle \sum\limits_{k=0}^{\infty} A_{k}s_{k}(t)$ 是否收敛。
+
+
+> **引理 3.9**
+> $\{ a_{k} \}_{k=0}^{\infty}$ 是一个实序列，假如存在某个常数 $C$ 以及 $\displaystyle 0 \leqslant \delta \leqslant \frac{1}{2}$，序列满足 $$|a_{k}| \leqslant Ck^{\delta}, \quad k = 1, 2, \dots$$则级数 $\displaystyle  \sum\limits_{k=0}^{\infty} a_{k}s_{k}(t)$ 对 $0 \leqslant t \leqslant 1$ 一致收敛。
+
+> **引理 3.10**
+> 考虑相互独立的标准 Gauss 随机变量序列 $\{ A_{k} \}_{k=1}^{\infty}$，对任意 $\omega \in \Omega$，当 $k \rightarrow \infty$ 时，有 $$|A_{k}(\omega)| = O(\sqrt{ \log k })$$
+
+> **定理 3.11 （构造 Brown 运动）**
+> 考虑相互独立的标准 Gauss 随机变量序列 $\{ A_{k} \}_{k=1}^{\infty}$，和 Schauder 函数 $s_{k}(t)$，级数 $$W(t, \omega) \coloneqq \sum\limits_{k=0}^{\infty} A_{k}(\omega)s_{k}(t), \quad  0 \leqslant t \leqslant 1$$在概率空间中几乎处处对 $t$ 一致收敛，且满足下面两个条件
+> 1. $W(\cdot)$ 在 $0 \leqslant t \leqslant 1$ 上是 Brown 运动
+> 2. 几乎所有 $\omega$ 确定的采样路径 $t \mapsto W(t, \omega)$ 连续
+
+> **定理 3.12 （一维 Brown 运动的存在性）**
+> 考虑概率空间 $(\Omega, \mathcal{U}, P)$ 上定义的可数个相互独立的标准 Gauss 随机变量 $\{ A_{n} \}_{n=1}^{\infty}$，则存在一个定义在 $\Omega$ 和 $t \geqslant 0$ 上的一维 Brown 运动 $W(\cdot)$
 
 ### 3.3.3 $\mathbb{R}^{n}$ 中的 Brown 运动
 
