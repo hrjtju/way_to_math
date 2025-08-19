@@ -269,20 +269,70 @@ E(W(t)W(s)) &= E\left[ \left( \sum\limits_{k=0}^{\infty} A_{k}s_{k}(t) \right)\l
 $$
 我们似乎走在正确的路上。下一个问题就是级数 $\displaystyle \sum\limits_{k=0}^{\infty} A_{k}s_{k}(t)$ 是否收敛。
 
-
 > **引理 3.9**
 > $\{ a_{k} \}_{k=0}^{\infty}$ 是一个实序列，假如存在某个常数 $C$ 以及 $\displaystyle 0 \leqslant \delta \leqslant \frac{1}{2}$，序列满足 $$|a_{k}| \leqslant Ck^{\delta}, \quad k = 1, 2, \dots$$则级数 $\displaystyle  \sum\limits_{k=0}^{\infty} a_{k}s_{k}(t)$ 对 $0 \leqslant t \leqslant 1$ 一致收敛。
 
+**证明.**
+要证明函数项级数一致收敛，只需证明当 $N$ 足够大时，$\sum\limits_{k=N}^{\infty} a_{k}s_{k}(t)$ 可以任意小。设 $$b_{n} := \max_{2^{n} \leqslant k < 2^{n+1}}|a_{k}| \leqslant C(2^{n+1})^{\delta}$$然后我们设置一个足够大的数 $m$，然后分段估计级数去掉前 $2^{m}$ 项后的无穷求和：
+$$
+\begin{align}
+\sum\limits_{k=2^{m}}^{\infty} |a_{k}| |s_{k}(t)| &= \sum\limits_{n=m}^{\infty} \sum\limits_{k=2^{n}}^{2^{n+1}-1} |a_{k}| |s_{k}(t)| \\
+&\leqslant \sum\limits_{n=m}^{\infty} \sum\limits_{k=2^{n}}^{2^{n+1}-1} b_n |s_{k}(t)| = \sum\limits_{n=m}^{\infty} b_n\sum\limits_{k=2^{n}}^{2^{n+1}-1} |s_{k}(t)| \\
+&\leqslant \sum\limits_{n=m}^{\infty} b_n \cdot \max_{{\scriptstyle 2^{n} \leqslant k < 2^{n+1}}\atop{\scriptstyle 0 \leqslant t \leqslant 1}}|s_{k}(t)| \cdot 1(t)\\
+&\leqslant C\sum\limits_{n=m}^{\infty} (2^{n+1})^{\delta}2^{-n/2-1}
+\end{align}
+$$
+由于 $\displaystyle \delta < \frac{1}{2}$，上式的指数部分被 $2^{-pn}$ 控制。当 $m$ 足够大时，后面的无穷求和可以任意小。上面推导的第三行使用了 Schauder 函数在 $2^{n} \leqslant k < 2^{n+1}$ 时的支持集（有非零函数值的集合）彼此不交的特点，因此得到了一个一致的上界，也就是常函数 $\displaystyle \max_{{\scriptstyle 2^{n} \leqslant k < 2^{n+1}}\atop{\scriptstyle 0 \leqslant t \leqslant 1}}|s_{k}(t)| \cdot 1(t)$。
+
 > **引理 3.10**
-> 考虑相互独立的标准 Gauss 随机变量序列 $\{ A_{k} \}_{k=1}^{\infty}$，对任意 $\omega \in \Omega$，当 $k \rightarrow \infty$ 时，有 $$|A_{k}(\omega)| = O(\sqrt{ \log k })$$
+> 考虑相互独立的标准 Gauss 随机变量序列 $\{ A_{k} \}_{k=1}^{\infty}$，对几乎所有 $\omega \in \Omega$，当 $k \rightarrow \infty$ 时，有 $$|A_{k}(\omega)| = O(\sqrt{ \log k })$$
+
+**证明.** 
+首先估计一下 $P(|A_{k}|) > x$ 的概率 $$
+\begin{align}
+P(|A_{k}| > x) &= \frac{2}{\sqrt{ 2\pi }}\int_{x}^{\infty} {e^{-s^{2}/2}} \, \mathrm d{s}\\
+&= \frac{2}{\sqrt{ 2\pi }}e^{-x^{2}/4}\int_{x}^{\infty} {e^{-s^{2}/4}} \, \mathrm d{s} \leqslant Ce^{-x^{2}/4}.
+\end{align}
+$$
+令 $x := 4\sqrt{ \log k }$，就有 $$
+P(|A_{k}| > 4\sqrt{ \log k }) \leqslant Ce^{-4\log k} = \frac{C}{k^{4}}.
+$$此时注意到 $\displaystyle \sum \frac{1}{k^{4}} < \infty$，就可以用 Borel-Cantelli 引理，得到$$P(|A_{k}| > 4\sqrt{ \log k }\quad\text{i.o.}) = 0$$因此对于几乎所有 $\omega$，都可以找到一个 $K(\omega)$，当 $k \geqslant K(\omega)$ 时，有 $|A_{k}(\omega)| \leqslant 4\sqrt{ \log k } \leqslant Ck^{1/4}$。
 
 > **定理 3.11 （构造 Brown 运动）**
 > 考虑相互独立的标准 Gauss 随机变量序列 $\{ A_{k} \}_{k=1}^{\infty}$，和 Schauder 函数 $s_{k}(t)$，级数 $$W(t, \omega) \coloneqq \sum\limits_{k=0}^{\infty} A_{k}(\omega)s_{k}(t), \quad  0 \leqslant t \leqslant 1$$在概率空间中几乎处处对 $t$ 一致收敛，且满足下面两个条件
 > 1. $W(\cdot)$ 在 $0 \leqslant t \leqslant 1$ 上是 Brown 运动
 > 2. 几乎所有 $\omega$ 确定的采样路径 $t \mapsto W(t, \omega)$ 连续
 
+**证明.**
+由我们的设定 $A_{k} \sim N(0, 1)$，根据引理 3.10，它可以被 $Ck^{1/4}$ 控制；因此目标级数一致收敛，因此它对几乎所有样本点 $\omega$ 也是连续的。
+
+下面验证这个函数项级数确实就是 Brown 运动 $W(\cdot)$。首先根据 Schauder 函数的定义立刻有 $W(0) = 0\quad\text{a.s.}$。接着我们验证对所有 $0 \leqslant s \leqslant t \leqslant 1$ 都有 $W(t) - W(s) \sim N(0, t - s)$，我们计算它的特征函数：
+$$
+\begin{align}
+\mathscr{F}[W(t)-W(s)] &= E(\exp \left\{ \text{i}\lambda(W(t)-W(s)) \right\} )\\
+&= E\left(\exp \left\{ \text{i}\lambda\left[ \sum\limits_{k=0}^{\infty} A_{k}(s_{k}(t)-s_{k}(s)) \right]\right\}\right)\\
+&= \prod\limits_{k=0}^{\infty} E\left(\exp \left\{ \text{i}\lambda\left[  A_{k}(s_{k}(t)-s_{k}(s)) \right]\right\}\right) & 独立性\\
+&= \prod\limits_{k=0}^{\infty} \exp \left\{ -\frac{\lambda^{2}}{2}\left[ s_{k}(t)-s_{k}(s) \right]^{2}\right\} & A_{k} \sim N(0, 1)\\
+&=  \exp \left\{- \frac{\lambda^{2}}{2} \sum\limits_{k=0}^{\infty} \left[ (s_{k}(t))^{2}+(s_{k}(s))^{2}+2s_{k}(t)s_{k}(s) \right]\right\} \\
+&=  \exp \left\{- \frac{\lambda^{2}}{2}\left[ t-2s+s \right]\right\} & 引理 3.8\\
+&= \exp \left\{- \frac{\lambda^{2}}{2}\left[ t-s \right]\right\} = \mathscr{F}[N(0, t-s)].
+\end{align}
+$$
+
+最后证明它符合 Brown 运动定义中的增量无关性质。还是一样，我们只需要证明
+$$
+\begin{align}
+\mathscr{F}\left[ W(t_{1}), W(t_{2})-W(t_{1}), \dots, W(t_{m})-W(t_{m-1}) \right]  
+&= \prod\limits_{j=1}^{m} \mathscr{F}[W(t_{j})-W(t_{j-1})]
+\\&= \prod\limits_{j=1}^{m} \mathscr{F}[N(0, t_{j}-t_{j-1})]
+\end{align}
+$$
+只需继续计算对应的特征函数，然后重复用引理 3.8 的结果即可。
+
 > **定理 3.12 （一维 Brown 运动的存在性）**
 > 考虑概率空间 $(\Omega, \mathcal{U}, P)$ 上定义的可数个相互独立的标准 Gauss 随机变量 $\{ A_{n} \}_{n=1}^{\infty}$，则存在一个定义在 $\Omega$ 和 $t \geqslant 0$ 上的一维 Brown 运动 $W(\cdot)$
+
+
 
 ### 3.3.3 $\mathbb{R}^{n}$ 中的 Brown 运动
 
