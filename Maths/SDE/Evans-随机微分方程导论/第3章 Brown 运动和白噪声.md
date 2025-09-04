@@ -532,7 +532,7 @@ $$
 
 ## 3.5 Markov 性
 
-> **定义 3. 21 （条件概率）**
+> **定义 3.21 （条件概率）**
 > 假设 $\mathcal{V} \subset \mathcal{U}$ 是一个子 $\sigma$-代数，对事件 $A \in \mathcal{U}$，定义 
 > $$P(A|\mathcal{V}) \coloneqq E(\chi_{A}|\mathcal{V})$$ 为事件 $A$ 在给定 $\mathcal{V}$ 下的条件概率，它是一个随机变量。
 
