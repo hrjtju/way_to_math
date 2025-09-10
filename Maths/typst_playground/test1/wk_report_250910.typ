@@ -138,7 +138,7 @@ $
 文中提出一个整合两者有点的方法，即不考虑单个扰动强度 $sigma$，而是考虑一个序列 $\{sigma_i\}_(i=1)^n$ 其中 $sigma_n$ 是一个足够小的数 (例如 0.01），$sigma_1$ 是一个足够大的数 (例如 25）。我们训练一个条件 score function $s_(theta)(bold(x), sigma)$ 预测不同扰动强度下的噪声方向。此时目标函数变为 
 
 $
-ell(theta, sigma) &:= frac(1, 2) EE_(p_("data")(bold(x)),macron(bold(x))~N(bold(x),sigma^2I)) [norm(s_(theta)(macron(bold(x))) + frac(macron(bold(x)) -bold(x), sigma^2))] \
+ell(theta, sigma) &:= frac(1, 2) EE_(p_("data")(bold(x)),macron(bold(x))~N(bold(x),sigma^2I)) [norm(s_(theta)(macron(bold(x))) + frac(macron(bold(x)) -bold(x), sigma^2))_2^2] \
 ell(theta, \{sigma_i\}_(i=1)^n) &:= frac(1,n)sum_(i=1)^n lambda(sigma_i)ell(theta, sigma_i)
 $
 
