@@ -3,6 +3,8 @@
 
 #import "@preview/numbly:0.1.0": numbly
 
+#show strong: set text(blue)
+
 #let wk_report_name = "2025年9月8日至9月14日周报"
 #let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
 
@@ -243,13 +245,49 @@ $
 
 == 随机过程
 
-#h(2em)进行了概率论部分的简单回顾。
+#h(2em)第一次课首先进行了概率论部分的简单回顾，但我了解到了一些之前不曾关注或早已遗忘的知识。首先是累积分布的间断点至多可数。以及实值非负随机变量 $X$ 的期望 $EE[X]$ 可以写成
+$
+EE[X] = integral x f_X(x) dd x = integral x dd F_X (x)
+$
+此时我们可以做一个变换，将“竖着”的 Riemann 和变成横着的：$x$ 变成 $dd x$，$F_X$ 变成 $F_X (+infinity) - F_X (x) = F_X^c (x)$。这样我们就能得到 $display(EE(X) = integral F_X^c (y) dd y)$。
+
+第一次课对应的讲义例题中提到了两个比较有趣的事。首先是*分拆数*，这一问题隐藏在球盒问题中。其设定为，有 $n$ 个球，需要放入 $M$ 个盒中，球和盒都无法区分，每个盒所装的球数量不限。该问题可以理解为，将正整数 $n$ 做 $k = 1, ..., M$ 次分拆，然后把所有的情况加起来。而分拆数本身则是一个经典的递归/动态规划算法题。记将正整数 $n$ 做 $k$ 次分拆的所有情况总数为 $p_k (n)$（这里的分拆是正整数的无序分拆），定义 $p_0 (0) = 1$ 那么首先可以得到边界条件： 
+
++ $p_0 (n) = 0, n > 1$
++ $p_1 (n) = 1$（整数的平凡分拆）
++ $p_k (n) = 0, k > n$ （不可能多分）
++ $p_k (k) = 1$（每份恰好是 $1$）
+
+接着为了得到递推式，可以做下面的讨论。我们关注最小的一份：
+
+- 假如这一份是 $1$，那么我们可以把这一份扔掉，剩下的所有情况数量是 $p_(k-1)(n-1)$
+- 假如最小的一份大于 $1$，那说明分出来的每一份都大于 $1$，我们把每一份都减一，分拆的份数不变，因此所有情况的数量是 $p_k (n-k)$。
+
+总而言之，可以得分拆数的递归式 $p_k (n) = p_(k-1) (n-1) + p_k (n-k)$。 
+
+另一个提到的事是*一列独立同分布随机变量的最大值、最小值和极差的分布*。首先看最大值。假设一列随机变量 $\{X_i\}_(i=1)^n$ 的最大值小于等于 $k$，则蕴含对任意 $i$，都有 $X_i lt.slant k$。因此有
+$
+F_(max)(k) &= P(X_1 lt.slant k, ..., X_n lt.slant k) = product_(i=1)^n F_X_i (X_i lt.slant k)
+$
+最小值分布同理，只需在推导中善用 $F_X (k) = 1 - P(X lt.slant k)$ 这一恒等式，结果为
+$
+F_min (k) = 1- product_(i=1)^n [1-F_X_i (k)]
+$
+比较麻烦的是极差，但其想法很简单。先假设一列随机变量的最小值是 $m$，极差为 $k$，所以除了最小、最大取值的两个随机变量，剩余随机变量都位于 $[m, m+k]$ 中。因此我们有
+$
+F_Z (k) 
+&= integral_(-infinity)^k integral_(-infinity)^(infinity) 2! dot binom(n, 2) [F_X (m+t) - F_X (m)]^(n-2) f_X (m) f_X (m+t) dd m dd t \
+&= integral_(-infinity)^k integral_(-infinity)^(infinity) n(n-1) [F_X (m+t) - F_X (m)]^(n-2) f_X (m) f_X (m+t) dd m dd (F_X (m+t) - F_X (m)) \
+&= integral_(-infinity)^(infinity) n f_X (m) integral_(-infinity)^k  (n-1) [F_X (m+t) - F_X (m)]^(n-2) dd (F_X (m+t) - F_X (m)) dd m \
+&= integral_(-infinity)^(infinity) n f_X (m) [F_X (m+t) - F_X (m)]^(n-1) |_(t = -infinity)^(t=k) dd m \
+&= integral_(-infinity)^(infinity) n f_X (m) [F_X (m+k) - F_X (m)]^(n-1)  dd m.
+$
 
 == 随机微分方程
 
 #h(2em)进度推进至 #ito 积分的定义，它的思路比较长。
 
-首先有一个 Paley-Wiener-Zygmund 随机积分定义，它需要要求被积函数 $g$ 是一个确定的函数，无法满足 $display(integral_0^(t) bold(B)(bold(X), s) dd bold(W))$ 这样的情形。因此我们考虑从 Riemann 和的角度逐步推广。
+首先有一个 *Paley-Wiener-Zygmund 随机积分*定义，它需要要求被积函数 $g$ 是一个确定的函数，无法满足 $display(integral_0^(t) bold(B)(bold(X), s) dd bold(W))$ 这样的情形。因此我们考虑从 Riemann 和的角度逐步推广。
 
 首先对于一维 Brown 运动 $W$ 和区间 $[0, T]$ 上的一个划分 $P$，我们可以定义 $display(integral_(0)^(T) W dd W)$ 的 Riemann 和估计
 $
@@ -259,13 +297,13 @@ $
 $
 lim_(|P| -> 0) R(P, lambda) = W(T)^2/2 + (lambda + 1/2) T
 $
-看似自然的取法是令 $display(lambda = 1/2)$ 这将得到 Stranovich 积分。而 #ito 积分的取法是 $lambda = 0$，也就是划分小区间的中点取得是小区间的左端点，这将在后续的处理中带来便利。
+看似自然的取法是令 $display(lambda = 1/2)$ 这将得到 *Stranovich 积分*。而 #ito 积分的取法是 $lambda = 0$，也就是划分小区间的中点取得是小区间的左端点，这将在后续的处理中带来便利。
 
-接着我们开始研究可以作为被积的随机过程。我们考虑的是在 $[0, T]$ 上二次可积的循序可测随机过程空间 $LL^2(0, T)$。和 Lebesgue 积分的定义类似，我们先从 “简单” 的循序可测过程开始，也就是阶梯过程。类似阶梯函数，阶梯过程 $G in LL^2(0, T)$ 是这样的随机过程：存在 $[0, T]$ 上的一个划分 $P = \{0 = t_0 < t_1 < dots.c < t_m = T\}$，使得对任意 $t in [t_k, t_(k+1))$，都有 $G(t) equiv G(t_k) = G_k$。其中 $G(t_k)$ 是 $cal(F)(t_k)$-可测的。有了阶梯过程的定义，我们容易给出其随机积分的形式
+接着我们开始研究可以作为被积的随机过程。我们考虑的是*在 $[0, T]$ 上二次可积的循序可测随机过程空间 $LL^2(0, T)$*。和 Lebesgue 积分的定义类似，我们先从 “简单” 的循序可测过程开始，也就是阶梯过程。类似阶梯函数，阶梯过程 $G in LL^2(0, T)$ 是这样的随机过程：存在 $[0, T]$ 上的一个划分 $P = \{0 = t_0 < t_1 < dots.c < t_m = T\}$，使得对任意 $t in [t_k, t_(k+1))$，都有 $G(t) equiv G(t_k) = G_k$。其中 $G(t_k)$ 是 $cal(F)(t_k)$-可测的。有了阶梯过程的定义，我们容易给出其随机积分的形式
 $
 integral_0^T G dd W := sum_(k=0)^(m-1) G_k [W(t_(k+1)) - W(t_k)]
 $
-接着，任意 $G in LL^2(0, T)$ 都可以被有界阶梯过程逼近，从而可以形成 #ito 积分的良好定义：存在一个极限为 $G$ 的阶梯过程序列 $G^((n))$，则 $G$ 的随机 #ito 积分就定义为
+接着，*任意 $G in LL^2(0, T)$ 都可以被有界阶梯过程逼近*，从而可以形成 #ito 积分的良好定义：存在一个极限为 $G$ 的阶梯过程序列 $G^((n))$，则 $G$ 的随机 #ito 积分就定义为
 $
 integral_0^T G dd W := lim_(n -> infinity) integral_0^T G^((n)) dd W.
 $

@@ -192,6 +192,81 @@ $$
 **例 0.14**
 (1) 学生 $A$ 被选中的概率为 $\displaystyle \binom{4}{2} \Big/ \binom{5}{2} = \frac{3}{5}$
 (2) 老师是随机公布结果的，因此概率变为 $\displaystyle \binom{3}{1} \Big/ \binom{4}{2} = \frac{1}{2}$
-(3) 假设 $A$ 没有被选入，则助教可以公布队伍中的任何一人；假如 $A$ 被选入，则助教只能公布除了 $A$ 之外的其他人。
-$A$ 没有被选入时，一共有 $\displaystyle \binom{3}{2} = 3$ 中情况，若助教随机公布其中一人，一共有 $9$ 种组合
-假如 $A$ 被选入，一共有 $\displaystyle \binom{4}{2} = 3$ 种情况，助教公布除了$A$ 以外的任何一人，一共有 $6$ 种组合，因此 $A$ 被选上概率为 $\displaystyle \frac{2}{5}$
+(3) 
+$$
+\begin{align}
+P(A|E) &= \frac{P(A, E)}{P(A, E) + P(\bar{A}, B)}\\
+&= \left( \frac{1}{2} \cdot \frac{3}{10} \right) \Big/ \left( \frac{1}{2}\cdot \frac{3}{10} + \frac{1}{3} \cdot \frac{3}{10} \right) = \frac{3}{5}
+\end{align}
+$$
+**例题 0.16**
+（1）$\mathcal{F}_{1}$ 和 $\mathcal{F}$ 是事件类，$\mathcal{F}_{0}$ 不是事件类
+（2）考虑以 $\mathcal{F}_{1}$ 为事件类的概率模型，以及 $X^{-1}(\{ X \leqslant 2 \}) = \{ 1, 2 \} \notin \mathcal{F}_{1}$，因此 $X$ 不是该概率模型上的随机变量。如果考虑 $\mathcal{F}$ 为事件类，则对任意的 $B = \{ X \leqslant x \}$ 都有 $X^{-1}(B) \subset \mathcal{F}$，因此 $X$ 此时是该概率模型上的随机变量
+（3）由于 $Y = X \text{mod} 2$，因此 $Y$ 的取值为 $\{ 0, 1 \}$。考虑 $\{ X \leqslant 0 \}$，则 $X^{-1}(\{ X \leqslant 0 \})$ $= \{ 2, 4, 6 \}$ $= \bar{A} \in \mathcal{F}_{1}$，而 $X^{-1}(\{ X \leqslant 1 \})$ 以及其他情形就不再赘述，因此 $Y$ 是随机变量。更细的事件类 $\mathcal{F}$ 就更不用说，显然 $Y$ 也是随机变量。
+
+**例题 0.18**
+(1) $P(X=2|X_{1}=6) = 0$
+(2) $P(X_{1}=2|X_{2}=6) = 1/36$
+(3) $P(X_{1} = 1|X = 2) = 1$，因为骰子的点数最小就是 $1$
+
+**例题 0.19**
+按照错误模型为 $Y = (X+Z) \text{ mod } 3$ 处理。
+
+| 乙接收<br>甲发送                     | 0                                                             | 1                                                             | 2                                                             |
+| ------------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
+| $\displaystyle 0, \frac{1}{2}$ | $\displaystyle \frac{1}{2} \cdot \frac{7}{8} = \frac{28}{64}$ | $\displaystyle \frac{1}{2} \cdot \frac{1}{16} = \frac{2}{64}$ | $\displaystyle \frac{1}{2} \cdot \frac{1}{16} = \frac{2}{64}$ |
+| $\displaystyle1, \frac{1}{4}$  | $\displaystyle \frac{1}{4} \cdot \frac{1}{16} = \frac{1}{64}$ | $\displaystyle \frac{1}{4} \cdot \frac{7}{8} = \frac{14}{64}$ | $\displaystyle \frac{1}{4} \cdot \frac{1}{16} = \frac{1}{64}$ |
+| $\displaystyle2, \frac{1}{4}$  | $\displaystyle \frac{1}{4} \cdot \frac{1}{16} = \frac{1}{64}$ | $\displaystyle \frac{1}{4} \cdot \frac{1}{16} = \frac{1}{64}$ | $\displaystyle \frac{1}{4} \cdot \frac{7}{8} = \frac{14}{64}$ |
+* 假如乙收到的字符是 $0$，那么有 $\displaystyle \frac{14}{15}$ 的概率甲发的是 $0$，其他情况为 $\displaystyle \frac{1}{30}$
+* 假如乙收到的字符是 $1$，有 $\displaystyle \frac{14}{17}$ 的概率甲发的是 $1$，有 $\displaystyle \frac{2}{17}$ 的概率是 $0$，$\displaystyle \frac{1}{17}$ 的概率是 $2$
+* 假如乙收到的字符是 $2$，有 $\displaystyle \frac{14}{17}$ 的概率甲发的是 $2$，有 $\displaystyle \frac{2}{17}$ 的概率是 $0$，$\displaystyle \frac{1}{17}$ 的概率是 $1$
+
+**例题 0.21**
+有卷积公式：
+$$
+p_{Z}(x) = \int_{-\infty}^{\infty} p_{X}(y)p_{Y}(x - y) \, \mathrm{d}y 
+$$
+
+**例题 0.22**
+(1)
+$$
+\begin{align}
+F_{\max}(k) &= P(\max\{ X_{1}, \dots, X_{n} \} \leqslant k)\\
+&= P(X_{1} \geqslant k, \dots, X_{n} \geqslant k)\\
+&= \prod\limits_{i=1}^{n} P(X_{i} \geqslant k)\\&=
+\prod\limits_{i=1}^{n} F_{X_{i}}(x_{i} \leqslant k)  
+\end{align}
+$$
+(2)
+$$
+\begin{align}
+F_{\min}(k) &= P(\min\{ X_{1}, \dots, X_{n} \} \leqslant k)\\
+&= 1- P(\min\{ X_{1}, \dots, X_{n} \} \geqslant k)\\
+&= 1 - P(X_{1} \geqslant k, \dots, X_{n} \geqslant k)\\
+&= 1 - \prod\limits_{i=1}^{n} P(X_{i} \geqslant k)\\
+&= 1- \prod\limits_{i=1}^{n} (1- F_{X_{i}}(k)) 
+\end{align}
+$$
+(3)
+$$
+Z = \max\{ X_{i} \} - \min\{ X_{i} \}
+$$
+所以我们首先假设极差是 $k$，最小值是 $m$，最大值是 $m+k$ 。则所有其他的随机变量的值一定位于 $[m, m+k]$ 之间，由于最大值和最小值可以出现在任意两个位置，所以有
+$$
+\begin{align}
+F_{Z}(k) 
+&= \int_{-\infty}^{k}  \int_{-\infty}^{\infty} \binom{n}{2} \cdot 2! \cdot \big[F_{X}(m+t) - F_{X}(m)\big]^{n-2} f_{X}(m)f_{X}(m+t)\, \mathrm{d}m \, \mathrm{d}t \\
+&= \int_{-\infty}^{k}  \int_{-\infty}^{\infty} n(n-1) \big[F_{X}(m+t) - F_{X}(m)\big]^{n-2} f_{X}(m)\, \mathrm{d}m \, \mathrm{d}(F_{X}(m+t) - F_{X}(m)) \\
+&= \int_{-\infty}^{\infty}f_{X}(m)\int_{-\infty}^{k} n(n-1) \cdot \big[F_{X}(m+t) - F_{X}(m)\big]^{n-2}  \, \mathrm{d}(F_{X}(m+t) - F_{X}(m))\, \mathrm{d}m \\
+&= \int_{-\infty}^{\infty}nf_{X}(m)\int_{-\infty}^{k} (n-1) \cdot y^{n-2}  \, \mathrm{d}y \, \mathrm{d}m \\
+&= \int_{-\infty}^{\infty}nf_{X}(m) \cdot \big[F_{X}(m+t) - F_{X}(m)\big]^{n-1} \big|^{t=k}_{t=-\infty} \cdot \, \mathrm{d}m \\
+&= \int_{-\infty}^{\infty}nf_{X}(m)  \big[F_{X}(m+k) - F_{X}(m)\big]^{n-1}  \, \mathrm{d}m \\
+\end{align}
+$$
+
+**例题 0.30**
+记第 $i$ 个人的随机变量为 $X_{i}$，拿到正确礼物的值为 $1$，拿到错误礼物的值为 $0$。因此
+$$
+\mathbb{E}[拿到正确礼物的人数] = \sum\limits_{i} \mathbb{E}[X_{i}] = 1.
+$$
+
