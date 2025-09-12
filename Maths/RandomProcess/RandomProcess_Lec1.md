@@ -73,5 +73,125 @@
 
 尾部概率
 * Markov 不等式
-* CHebyshev 不等式
+* Chebyshev 不等式
 * Chernov 界
+
+---
+
+**例 0.1**
+
+**例 0.2**
+
+2. 不是，$A^{c}$ 不在 $\{ \Omega, A, \varnothing \}$ 中
+3. 是的，它关于补集和可数并封闭，$\Omega$ 和空集也都在其中
+4. 是的，$\Omega$ 是有限集，$2^{\Omega}$ 是最 “精细” 的事件类
+5. 有限样本空间 $\Omega$ 的大小为 $|\Omega|$，其子集个数是 $$\underbrace{ \binom{|\Omega|}{0} }_{ 空集 } + \underbrace{ \binom{|\Omega|}{1} }_{ 单点集 } + \binom{|\Omega|}{2} + \cdots + \underbrace{ \binom{|\Omega|}{|\Omega|-1} }_{ 单点集的补集 } + \underbrace{ \binom{|\Omega|}{|\Omega|} }_{ 全集 } = 2^{|\Omega|}$$
+6. 概率测度 $\mathbb{P}$ 是从 $\mathscr{F}$ 到 $\mathbb{R}_{\geqslant_{0}}$ 的映射
+
+**例 0.3** 从 $M$ 个互不相同的球中抽取 $n$ 个
+1. 有放回抽取
+	1. 有序：所有情况为 $111\cdots111, 111\cdots112, \dots, 211\cdots111, \dots, M M M \cdots M M M$，因此 $|\Omega| = M^{n}$
+	2. 无序：考虑一般的情形，拿出了 $n$ 个球，一共有 $k$ 种。由于是无序，规定从小到大排序结果相同的两次实验结果等价，其一般形式为 $\underbrace{ 11\cdots122\cdots 2\cdots kk \cdots k }_{ n 个 }$，这样的情况相当于在 $n$ 个格子的 $n-1$ 个空隙中插 $k-1$ 个隔板，总共情况数量为 $\displaystyle \binom{n-1}{k-1}$。因此遍历所有的情况就得到 $|\Omega| = \displaystyle \sum\limits_{k=1}^{\min\{n, M\}} \binom{M}{k} \binom{n-1}{k-1}$
+2. 不放回抽取
+	1. 有序：$\displaystyle |\Omega| = \binom{M}{n} n!$
+	2. 无序：$\displaystyle |\Omega| = \binom{M}{n}$
+
+**例 0.4** 把 $n$ 个球扔进 $M$ 个箱子
+1. 球可区分，箱子可区分，不限箱中球数：相当于一个每列都只有一个 $1$ 的形状为 $M \times n$ 的 $0-1$ 矩阵的总数，即 $|\Omega| = M^{n}$
+2. 球不可区分，箱子可区分，不限箱中球数： 相当于先在每个盒子中放一个球，然后用隔板法，有 $|\Omega| = \displaystyle \binom{M+n-1}{M-1}$
+3. 球可区分，箱子可区分，箱中球数至多一个：显然有 $M \geqslant n$。相当于每行每列最多只有一个 $1$ 的 $M \times n$ 的 $0-1$ 矩阵总数，即 $|\Omega| = M(M-1)\cdots(M-n+1) =\displaystyle \frac{M!}{(M-n)!}$
+4. 球不可区分，箱子可区分，箱中球数至多一个：显然有 $M \geqslant n$，即为 $M$ 个箱子中选 $n$ 个装 $1$ 个球，即 $|\Omega| = \displaystyle \binom{M}{n}$
+5. 球不可区分，箱子不可区分，不限箱中球数：分拆数。记 $f(i,j)$ 是把 $i$ 个相同的球放在 $j$ 个相同的盒子中（都不空）的方案总数。因此有 $f(i, 1) = 1$，$f(0, j) = 1$，$f(1,j) = 1$。有递推式 $$f(m,n) = f(m-n, n) + f(m-1, n-1)$$并规定当 $i < j$ 时 $f(i,j) = 0$。因此 $|\Omega| = \displaystyle \sum\limits_{k=1}^{M} f(n, k)$
+
+**例 0.5**
+由容斥原理，有
+$$
+\begin{align}
+|A \cup B \cup C| &= |A| + |B| + |C| - |A\cap B| - |B\cap C| - |C \cap A| + |A \cap B \cap C|\\
+&= 67 + 41 + 29 - 14 - 6 - 10 + 2 = 109
+\end{align}
+$$
+
+**例 0.6**
+$$
+\begin{align}
+P(B \cup C) &= P(A, B \cup C) + P(\bar{A}, B \cup C)\\
+&= 0.3 + P(\bar{A}) - P(\bar{A}, \overline{B \cup C})\\
+&= 0.3 + P(\bar{A}) - P(\bar{A}, \bar{B}, \bar{C})\\
+&= 0.3 + 0.6 - 0.1 = 0.8.
+\end{align}
+$$
+**例 0.7**
+任取正数 $\varepsilon > 0$，总存在正整数 $N > 0$，使得当 $n \geqslant N$ 时，成立
+$$
+\begin{align}
+|P(A_{n}) - 1| = 1-P(A_{n}) &< \varepsilon\\
+|P(B_{n}) - 1| = 1-P(B_{n}) &< \varepsilon
+\end{align}
+$$
+因此 $1 \geqslant P(A_{n} \cup B_{n}) \geqslant P(A_{n}) > 1-\varepsilon$，进而有 $\displaystyle \lim_{ n \to \infty } P(A_{n} \cup B_{n}) = 1$。由容斥原理，有
+$$
+P(A_{n} \cup B_{n}) = P(A_{n}) + P(B_{n}) - P(A_{n} \cap B_{n})
+$$
+两侧取极限，就有 $\displaystyle \lim_{ n \to \infty } P(A_{n} \cap B_{n}) = 1$。
+
+**例 0.8**
+首先
+$$
+\begin{align}
+P(A|B) + P(A|\bar{B}) &= \frac{P(A, B)}{P(B)} + \frac{P(A,\bar{B})}{P(\bar{B})}\\
+&= \frac{P(A, B)}{P(B)} + \frac{P(A,\bar{B})}{1-P(B)}\\
+&= \frac{P(A, B) + P(B)[P(A, \bar{B})-P(A, B)]}{P(B)(1-P(B))}
+\end{align}
+$$
+上式无法化简，显然不等于 $1$。假如 $A$ 是掷骰子掷出偶数，$B$ 是掷骰子掷出 $3$ ，那么 $P(A|B) = 0$，$P(A|\bar{B}) = 0.6$。
+$P(A)$ 和 $P(A|B)$ 可以有任一大小关系。继续假设 $A$ 是掷骰子掷出偶数
+* 若 $B$ 是掷骰子掷出 $3$，则 $P(A|B) < P(A)$
+* 若 $B$ 是掷骰子掷出 $2$，则 $P(A|B) > P(A)$
+* 若 $B$ 是掷骰子掷出 $1, 2, \dots, 6$ 中的其中一个，则 $P(A|B) = P(A)$
+
+**例 0.9**
+* 第一个骰子和第二个骰子互不影响，因此 $A$ 和 $B$ 独立
+* $\displaystyle P(AC) = 第一个为奇数，第二个为偶数 = \frac{1}{4}$，两个骰子和为奇数有两种情况，第一个是奇数，第二个是偶数；第一个是偶数，第二个是奇数。因此 $P(AC) = P(A)P(C)$，因此 $A$ 和 $C$ 独立。由对称性知 $B$ 和 $C$ 也独立
+* 显然如果第一个和第二个都是奇数，那和不可能为奇数，即 $P(ABC)= 0$，因此 $A,B,C$ 不独立
+
+**例 0.10**
+(1) $A$ 和 $B \cap C$ 独立，但 $A$ 和 $B$，以及 $A$ 和 $C$ 不独立。
+![[Pasted image 20250912123722.png]]
+考虑这样的概率空间，取子集与全空间面积之比作为概率。全空间是矩形 $ABCD$，其中线段 $FG$ 和 $IJ$ 分别与矩形的两边垂直。令 $A$ 事件是矩形 $ABGF$，$B$ 事件是矩形 $IBGH$，$C$ 事件是矩形 $HGCJ$。显然 $A$ 和 $B \cap C$ 独立，但 $A$ 和 $B$，以及 $A$ 和 $C$ 不独立。
+
+(2) $P(A \cap B) = P(A) + P(B) - P(A \cup B) \geqslant P(A) + P(B) - 1 > \displaystyle \frac{1}{2}$
+
+**例 0.11**
+选中黑球的概率是
+$$
+\begin{align}
+P(B) &= \sum\limits_{i} P(B|i)P(i) = \frac{1}{3}\sum\limits_{i} \frac{b_{i}}{b_{i} + w_{i}} 
+\end{align}
+$$
+已知是黑球，是从第 $i$ 个袋子抽出的概率为
+$$
+P(i|B) = \frac{3P(i,B)}{\sum_{j} P(B|j)P(j)} = \left( \frac{3b_{i}}{b_{i} + w_{i}} \right) \Big/ \left(\sum\limits_{j} \frac{b_{j}}{b_{j} + w_{j}} \right)
+$$
+
+**例 0.12**
+记 Alice 发出字符 $i$ 的事件为 $A_{i}$，Bob 收到字符 $j$ 的事件为 $B_{j}$。
+$$
+\begin{align}
+P(B_{1}|A_{0}) &= \frac{P(B_{1}, A_{0})P(A_{0})}{P(B_{1}, A_{0})P(A_{0}) + P(B_{1}, A_{1})P(A_{1})}\\
+&= \frac{p_{e}p_{0}}{p_{e}p_{0} + (1-p_{e})(1-p_{0})}
+\end{align}
+$$
+
+**例 0.13**
+不妨假设学生偏好做线性代数试题。
+* 假设学生选到的是线性代数试题，那么助教不论打开哪一个试题都是随机过程试题
+* 假设学生选到的是随机过程试题，那么助教只能打开剩下的那一个随机过程试题（没有打开的那个就是线性代数试题）
+所以在概率为 $\displaystyle \frac{1}{3}$ 的第一种情境中，学生不能换；在概率为 $\displaystyle \frac{2}{3}$ 的第二种情境中，学生应该换。综上所述学生应该更换试题。
+
+**例 0.14**
+(1) 学生 $A$ 被选中的概率为 $\displaystyle \binom{4}{2} \Big/ \binom{5}{2} = \frac{3}{5}$
+(2) 老师是随机公布结果的，因此概率变为 $\displaystyle \binom{3}{1} \Big/ \binom{4}{2} = \frac{1}{2}$
+(3) 假设 $A$ 没有被选入，则助教可以公布队伍中的任何一人；假如 $A$ 被选入，则助教只能公布除了 $A$ 之外的其他人。
+$A$ 没有被选入时，一共有 $\displaystyle \binom{3}{2} = 3$ 中情况，若助教随机公布其中一人，一共有 $9$ 种组合
+假如 $A$ 被选入，一共有 $\displaystyle \binom{4}{2} = 3$ 种情况，助教公布除了$A$ 以外的任何一人，一共有 $6$ 种组合，因此 $A$ 被选上概率为 $\displaystyle \frac{2}{5}$

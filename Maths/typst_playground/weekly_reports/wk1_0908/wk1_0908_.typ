@@ -4,7 +4,7 @@
 #import "@preview/numbly:0.1.0": numbly
 
 #let wk_report_name = "2025年9月8日至9月14日周报"
-#let name_affliation = "何瑞杰 | 中山大学 & 大湾区大学"
+#let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
 
 #let const = "constant"
 #let bx = $bold(x)$
@@ -18,7 +18,7 @@
 #set page(
   paper: "a4",
   numbering: "1",
-  header: wk_report_name + " | " + name_affliation,
+  header: wk_report_name + " | " + name_affiliation,
 )
 
 #set par(
@@ -102,7 +102,7 @@ J(theta)
   - integral angle.l s_(theta)(mx), nabla_(mx) ps(mx) angle.r dd mx 
   + const \ 
 &= frac(1,2)EE_(mx ~ ps(mx)) [ norm(s_(theta)(mx))_2^2 ] 
-  - integral angle.l s_(theta)(mx), nabla_(mx) integral qs(mx|bx)pd(bx) dd bx angle.r dd mx 
+  - integral lr(angle.l s_(theta)(mx), nabla_(mx) integral qs(mx|bx)pd(bx) dd bx angle.r) dd mx 
   + const \ 
 &= frac(1,2)EE_(mx ~ ps(mx)) [ norm(s_(theta)(mx))_2^2 ] 
   - integral.double ps(mx) pd(bx) angle.l s_(theta)(mx), nabla_(mx) qs(mx|bx) angle.r dd bx dd mx 
@@ -162,16 +162,16 @@ ell(theta, sigma) &:= frac(1, 2) EE_(p_("data")(bold(x)),macron(bold(x))~N(bold(
 ell(theta, \{sigma_i\}_(i=1)^n) &:= frac(1,n)sum_(i=1)^n lambda(sigma_i)ell(theta, sigma_i)
 $
 
-其中 $lambda(sigma_i)$ 是权重函数，常取为 $lambda(sigma_i) = sigma_i^2$，以平衡不同扰动强度下 score function 的范数。在采样时，我们就做类似模拟退火的采样动作。首先选取最高的扰动强度 $sigma_1$ 然后再该噪声强度下迭代若干次，然后选取次高的扰动强度 $sigma_2$ 再该噪声强度下迭代若干次，以此类推。这样就可以综合利用大扰动强度和小扰动强度的有点，从而更好的采样。在实际实验中，作者提出的方法在 CIFAR-10 数据集上取得了不错的效果。整个过程如下面的算法所示。
+其中 $lambda(sigma_i)$ 是权重函数，常取为 $lambda(sigma_i) = sigma_i^2$，以平衡不同扰动强度下 score function 的范数。在采样时，我们就做类似模拟退火的采样动作。首先选取最高的扰动强度 $sigma_1$ 然后在该噪声强度下迭代若干次，然后选取次高的扰动强度 $sigma_2$ 并在该噪声强度下迭代若干次，以此类推。这样就可以综合利用大扰动强度和小扰动强度的有点，从而更好的采样。在实际实验中，作者提出的方法在 CIFAR-10 数据集上取得了不错的效果。整个过程如下面的算法所示。
 
 #show: style-algorithm
 #algorithm-figure(
-  "Anneled Langevin Dynamics",
+  "Annealed Langevin Dynamics",
   vstroke: .5pt + luma(200),
   {
     import algorithmic: *
     Procedure(
-      "Anneled Langevin Dynamics",
+      "Annealed Langevin Dynamics",
       ($\{sigma_i\}_(i=1)^n$, $epsilon$, $T$),
       {
         Comment[Initialize the search range]
@@ -194,6 +194,12 @@ $
   }
 )
 
+#h(-2em)参考资料
++ https://www.youtube.com/watch?v=B4oHJpEJBAA
+
+#pagebreak()
+== Sliced Score Matching: A Scalable Approach to Density and Score Estimation
+Yang Song, Sahaj Garg, Jiaxin Shi, Stefano Ermon | https://arxiv.org/abs/1905.07088
 
 #pagebreak()
 = 项目进展
@@ -201,11 +207,45 @@ $
 
 #pagebreak()
 = 学习进度
-== 随机过程 [必修课]
+
+== Gray-Scott 系统
+
+#h(2em)Gray-Scott 描述了包含两个反应的体系
+$
+U + 2V &--> 3V\
+V &--> P
+$
+体系中的 $U$ 和 $V$ 的浓度 $u$ 和 $v$ 的变化可用下面的偏微分方程描述
+$
+(partial u)/(partial t) &=-&u v^2 &+f(1-u) &+ D_u Delta u \ 
+(partial v)/(partial t) &= &u v^2 &-(f+k)v &+ D_v Delta v \ 
+$ 
+其中 $D_u$ 和 $D_v$ 是扩散系数，$f$ 和 $k$ 是对应物质的填补和消耗速率常数。上式中等号右边第一项表示化学反应速率，第二项表示体系中物质 $U$ 的添补速率和 $V$ 的消耗速率，第三项表示两种物质在体系中的扩散。
+
+在实际的数值模拟中，大多数 $(f, k)$ 的组合都会使得系统演化向无趣的平衡状态：如果组合位于相图阈值线的一边，系统加入的 $U$ 物质将被立刻反应；如果位于另一边，系统中反应产生的 $V$ 将被立刻耗尽。但当 $(f, k)$ 接近阈值线时，系统将会演化出不同类型的斑图。#highlight("关于具体稳定点和分岔的分析暂时没有看懂。")
+
+#grid(
+  columns: 2,
+  figure(
+    image("image-1.png", width: 80%),
+    caption: [Gray-Scott 系统的相图 ]
+  ),
+  figure(
+    image("image.png", width: 77%),
+    caption: [Gray-Scott 系统当 $F=0.029 \; k=0.057$ 时呈现的“迷宫”斑图 ]
+  )
+)
+
+
+参考资料
++ https://itp.uni-frankfurt.de/~gros/StudentProjects/Projects_2020/projekt_schulz_kaefer/
++ https://groups.csail.mit.edu/mac/projects/amorphous/GrayScott/
+
+== 随机过程
 
 #h(2em)进行了概率论部分的简单回顾。
 
-== 随机微分方程 [研究方向相关]
+== 随机微分方程
 
 #h(2em)进度推进至 #ito 积分的定义，它的思路比较长。
 
@@ -225,15 +265,94 @@ $
 $
 integral_0^T G dd W := sum_(k=0)^(m-1) G_k [W(t_(k+1)) - W(t_k)]
 $
-接着，任意 $G in LL^2(0, T)$ 都可以被有界阶梯过程逼近，从而可以形成 #ito 积分的良好定义：存在一个极限为 $G$ 的解题过程序列 $G^((n))$，定义
+接着，任意 $G in LL^2(0, T)$ 都可以被有界阶梯过程逼近，从而可以形成 #ito 积分的良好定义：存在一个极限为 $G$ 的阶梯过程序列 $G^((n))$，则 $G$ 的随机 #ito 积分就定义为
 $
 integral_0^T G dd W := lim_(n -> infinity) integral_0^T G^((n)) dd W.
 $
 
+参考资料
++ 
 
-== 流形上的微积分 [基础补遗]
+== 流形上的微积分
 
 
-== 深度学习理论 [基础补遗]
+
+参考资料
++ 
+
+== 深度学习理论
 
 
+参考资料
++ 
+
+#pagebreak()
+= 问题解决记录
+
+== Typst 相关
+
+我正学习使用 Typst 排版周报和回报 Slides，其语法相比 LaTeX 更加简洁，编译速度也快得多，使用者若有 markdown 或 LaTeX 的基础，上手十分容易。
+
+=== 缩放内积括号
+
+在本次周报的编辑中遇到了内积括号无法放大的问题，最终在官方问答区找到答案。具体而言，需要加上 `lr()`，即 `lr(angle.l ... angle.r)`，例如
+$
+angle.l s_(theta)(mx), nabla_(mx) integral qs(mx|bx)pd(bx) dd bx angle.r 
+wide
+lr(angle.l s_(theta)(mx), nabla_(mx) integral qs(mx|bx)pd(bx) dd bx angle.r)
+$
+这是没有加上 `lr()` 的版本（左）和加上了 `lr()` 版本（右）的对比。
+
+
+#h(-2em)参考资料
++ https://forum.typst.app/t/how-to-use-latexs-langle-and-rangle-functions-in-typst/2974
+
+== 推导相关
+=== 更一般的分部积分公式
+
+在推导 Score matching 中的优化目标变换时，在
+$
+frac(1,2)EE_(pd) [ norm(s_(theta)(bx)) ] 
+  + integral angle.l s_(theta)(bx), #text(red)[$nabla_(bx) pd(bx)$] angle.r "d"x 
+= EE_(pd) [ frac(1,2) norm(s_(theta)(bx)) 
+  + tr(nabla_(bx) s_(theta)(bx)) ] + const
+$
+这一步遇到了问题。讲解视频中常常将 $x$ 考虑为一维向量，从而规避了这里的推导。一维版本推导中使用到分部积分公式，我推测多维版本也使用了分部积分公式。我参考 https://www.jhanmath.com/?p=142 中的内容将其中的缺失步骤补齐，并填补先前没有学好的散度相关知识。
+
+对于函数 $f: RR^3 --> RR$，其对应的微分算子可以写成 $display(nabla = [partial/(partial x), partial/(partial y), partial/(partial z)])$，这与 $f$ 的梯度相容，因为 $display(nabla f = [(partial f)/(partial x), (partial f)/(partial y), (partial f)/(partial z)])$。散度是该微分算子和向量场 $bold(V) = [bold(V)_x, bold(V)_y, bold(V)_z]$ 的内积：
+$
+"div"(bold(V)) = angle.l nabla, bold(V) angle.r = (partial bold(V)_x)/(partial x) + (partial bold(V)_y)/(partial y) + (partial bold(V)_z)/(partial z) = tr(nabla bold(V)).
+$
+对于标量值函数 $u$，可以证明有下面的性质
+$
+angle.l nabla, u bold(V) angle.r 
+&= (partial u bold(V)_x)/(partial x) 
+  + (partial u bold(V)_y)/(partial y) 
+  + (partial u bold(V)_z)/(partial z) \
+&= [(partial u)/(partial x)  bold(V)_x + u (partial bold(V)_x)/(partial x)]
+  + [(partial u)/(partial y)  bold(V)_y + u (partial bold(V)_y)/(partial y)]
+  + [(partial u)/(partial z)  bold(V)_z + u (partial bold(V)_z)/(partial z)]\
+&= [(partial u)/(partial x)  bold(V)_x
+    + (partial u)/(partial y)  bold(V)_y
+    + (partial u)/(partial z)  bold(V)_z]
+  + u[(partial bold(V)_x)/(partial x)
+    + (partial bold(V)_y)/(partial y)
+    +(partial bold(V)_z)/(partial z)]
+= angle.l nabla u, bold(V) angle.r + u angle.l nabla, bold(V) angle.r
+$
+通过该运算法则，就有向量场的分部积分公式。$Omega$ 是 $RR^n$ 中的一个有界开集，其边界 $Gamma = partial Omega$ 分段光滑，有
+$
+integral_(Omega) angle.l nabla, u bold(V) angle.r dd Omega
+ = integral_(Gamma) u angle.l bold(V), hat(bold(n)) angle.r dd Gamma   
+&= integral_(Omega) angle.l nabla u, bold(V) angle.r dd Omega
+  + integral_(Omega) u angle.l nabla, bold(V) angle.r dd Omega.
+$
+在 Score matching 的推导中，由于积分区域是全空间，并默认概率密度函数在无穷远处的极限为零，应用分部积分公式即可。
+
+#h(-2em)参考资料
++ https://www.jhanmath.com/?p=142
+
+== 代码实践相关
+
+
+== 学习方法论相关
