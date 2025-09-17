@@ -199,13 +199,82 @@ $
 #h(-2em)参考资料
 + https://www.youtube.com/watch?v=B4oHJpEJBAA
 
-#pagebreak()
-== Sliced Score Matching: A Scalable Approach to Density and Score Estimation
-Yang Song, Sahaj Garg, Jiaxin Shi, Stefano Ermon | https://arxiv.org/abs/1905.07088
+// #pagebreak()
+// == Sliced Score Matching: A Scalable Approach to Density and Score Estimation
+// Yang Song, Sahaj Garg, Jiaxin Shi, Stefano Ermon | https://arxiv.org/abs/1905.07088
 
 #pagebreak()
 = 项目进展
 == 使用神经网络学习生命游戏的演化动力学
+=== 神经网络的预测规则验证
+
+#h(2em)本周我根据杨武岳老师的建议开始分析训练好的模型。一个对于训练好模型的解释是其是否满足下面的生命游戏演化动力学。假如 $c$ 代表某个细胞的状态，$bold(n) = [n_1, n_2, ..., n_8]$ 为它八个邻居的存活状态，则其演化动力学可以写成
+$
+f(c, bold(n)) = cases(
+  1 "if" c = 0 "and" norm(bold(n))_1 = 3,
+  1 "if" c = 1 "and" norm(bold(n))_1 in "{2, 3}",
+  0 "otherwise"
+)
+$
+我获取训练好的简化序贯模型后，对全数据集中抽样检查了其中的 1400 组左右的系统状态变换的预测情况，包含大致 $1.4 times 10^7$ 个细胞状态变换。统计方法为建立一个字典，其键形如 $(x, y)$，其中 $x, y in \{0, 1\}$ 对应的值为一个列表，抽取数据中细胞状态为 $x$ 被模型预测下一状态为 $y$　时，它周围的存活细胞数量。经过统计可得下图。
+#figure(
+    image("7b2dff28ba8715610f2eaecde0e13265.png", width: 70%),
+    caption: [神经网络对生命游戏状态预测的统计]
+)
+可见除了极少数预测错误外，网络的预测规则和生命游戏的演化动力学基本契合。
+
+
+=== 首层卷积核可视化和冗余卷积核的去除
+
+其次，我对原来特征图通道数为 $8$ 的串行 CNN 模型进行进一步的简化，先将通道数降为 $4$，发现训练完成后仍有大量卷积核参数矩阵的分量绝对值较低，于是进一步将通道数降低到 $2$。下面是降低后的模型代码和结构
+
+```python
+class SimpleCNNTiny(nn.Module):
+    __version__ = '0.1.0'
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(2, 1, 3, 1, padding=1, padding_mode="circular")
+        self.bn1 = nn.BatchNorm2d(1)
+        self.act1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(1, 1, 3, 1, padding=1, padding_mode="circular")
+        self.bn2 = nn.BatchNorm2d(1)
+        self.act2 = nn.ReLU()
+        self.conv3 = nn.Conv2d(1, 2, 3, 1, padding=1, padding_mode="circular")
+    def forward(self, x: Float[Array, "batch 2 w h"]
+                ) -> Float[Array, "batch 2 w h"]:
+        x = self.act1(self.bn1(self.conv1(x)))
+        x = self.act2(self.bn2(self.conv2(x)))
+        return self.conv3(x)
+```
+
+`torchinfo` 输出的模型结构分析如下
+
+```text
+==========================================================================================
+Layer (type:depth-idx)                   Output Shape              Param #
+==========================================================================================
+SimpleCNNTiny                            [1, 2, 100, 100]          --
+├─Conv2d: 1-1                            [1, 1, 100, 100]          19
+├─BatchNorm2d: 1-2                       [1, 1, 100, 100]          2
+├─ReLU: 1-3                              [1, 1, 100, 100]          --
+├─Conv2d: 1-4                            [1, 1, 100, 100]          10
+├─BatchNorm2d: 1-5                       [1, 1, 100, 100]          2
+├─ReLU: 1-6                              [1, 1, 100, 100]          --
+├─Conv2d: 1-7                            [1, 2, 100, 100]          20
+==========================================================================================
+Total params: 53                        Trainable params: 53
+Non-trainable params: 0                 Total mult-adds (M): 0.49
+==========================================================================================
+Input size (MB): 0.08                   Forward/backward pass size (MB): 0.48
+Params size (MB): 0.00                  Estimated Total Size (MB): 0.56
+==========================================================================================
+```
+我对进行 $2$ epoch 训练后的模型的首层卷积核参数进行可视化，发现对应于 $x_t$ 的卷积核的激活程度明显小于对应于 $x_(t+1)$ 的激活程度。因此我认为可以恢复原来给定 $x_t$ 预测 $x_(t+1)$ 的模式。
+#figure(
+    image("convolution_kernels_visualization_2channels.png", width: 65%),
+    caption: [对双通道特征图串行结构CNN的首层卷积核的可视化结果]
+)
+
 
 #pagebreak()
 = 学习进度
@@ -308,23 +377,6 @@ $
 integral_0^T G dd W := lim_(n -> infinity) integral_0^T G^((n)) dd W.
 $
 
-参考资料
-+ 
-
-== 流形上的微积分
-
-
-
-参考资料
-+ 
-
-== 深度学习理论
-
-
-参考资料
-+ 
-
-#pagebreak()
 = 问题解决记录
 
 == Typst 相关
@@ -390,7 +442,4 @@ $
 #h(-2em)参考资料
 + https://www.jhanmath.com/?p=142
 
-== 代码实践相关
 
-
-== 学习方法论相关
