@@ -64,7 +64,7 @@ Yang Song, Sahaj Garg, Jiaxin Shi, Stefano Ermon | https://arxiv.org/abs/1905.07
 
 == 随机微分方程
 
-#h(2em)
+#h(2em)本周学习了 #ito 积分的链式法则、和乘积法则。
 
 == Gray-Scott 系统
 
