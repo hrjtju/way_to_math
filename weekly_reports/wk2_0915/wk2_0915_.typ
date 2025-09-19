@@ -1,5 +1,8 @@
 #import "@preview/algorithmic:1.0.5"
-#import algorithmic: style-algorithm, algorithm-figure
+#import algorithmic: (
+  style-algorithm, 
+  algorithm-figure
+)
 
 #import "@preview/numbly:0.1.0": numbly
 
@@ -32,7 +35,8 @@
 
 #align(
   center, 
-  text(17pt)[#wk_report_name\ ] + text(12pt)[\ 何瑞杰\ 中山大学, 大湾区大学]
+  text(17pt)[#wk_report_name\ ] 
+        + text(12pt)[\ 何瑞杰\ 中山大学, 大湾区大学]
 )
 
 = 项目进展
