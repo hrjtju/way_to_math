@@ -11,9 +11,9 @@
   navigation: "mini-slides",
   config-info(
     title: [Generative Modeling by Estimating Grad. of the Data Dist.],
-    subtitle: [组会汇报 | 论文阅读报告],
+    subtitle: [机器学习课程汇报],
     author: [何瑞杰],
-    date: datetime(year: 2025, month: 9, day: 10),
+    date: datetime(year: 2025, month: 9, day: 24),
     institution: [中山大学 #sym.hyph.point 数学学院],
   ),
   mini-slides: (
@@ -62,17 +62,17 @@ $
 自然地，我们有 Score matching 的原始目标函数：
 
 $
-J(theta) := frac(1,2)EE_(bold(x) ~ p_("data")) [||s_(theta)(bold(x))-nabla_(bold(x))log p_("data")(bold(x))||_2^2].
+J(theta) := frac(1,2)EE_(bold(x) ~ p_("data")) [norm(s_(theta)(bold(x))-nabla_(bold(x))log p_("data")(bold(x)))_2^2].
 $
 
 但由于我们不知道原始数据的分布，因此我们无法求得 $nabla_(bold(x)) log p_("data")(bold(x))$，需要做下面转化
 
 $
-frac(1,2)EE_(p_("data")) [||s_(theta)(bold(x))-nabla_(bold(x))log p_("data")(bold(x))||_2^2] 
-=& frac(1,2)EE_(p_("data")) [ ||s_(theta)(bold(x))||_2^2 ] + cancel(EE_(p_("data")) [||nabla_(bold(x)) log p_("data")(bold(x))||_2^2]) \
+frac(1,2)EE_(p_("data")) [norm(s_(theta)(bold(x))-nabla_(bold(x))log p_("data")(bold(x)))_2^2] 
+=& frac(1,2)EE_(p_("data")) [ norm(s_(theta)(bold(x)))_2^2 ] + cancel(EE_(p_("data")) [norm(nabla_(bold(x)) log p_("data")(bold(x)))_2^2]) \
 &- EE_(p_("data")) [ angle.l s_(theta)(bold(x)), nabla_(bold(x)) log p_("data")(bold(x)) angle.r] \ 
-=& frac(1,2)EE_(p_("data")) [ ||s_(theta)(bold(x))||_2^2 ] + integral p(bold(x)) "div"(s_(theta)(bold(x))) "d"x\  
-=& EE_(p_("data")) [ frac(1,2) ||s_(theta)(bold(x))||_2^2 + tr(nabla_(bold(x)) s_(theta)(bold(x))) ]
+=& frac(1,2)EE_(p_("data")) [ norm(s_(theta)(bold(x)))_2^2 ] + integral p(bold(x)) "div"(s_(theta)(bold(x))) "d"x\  
+=& EE_(p_("data")) [ frac(1,2) norm(s_(theta)(bold(x)))_2^2 + tr(nabla_(bold(x)) s_(theta)(bold(x))) ]
 $
 
 ---
@@ -82,7 +82,7 @@ $
 经计算后我们能得到更加实际的目标函数：
 
 $
-J(theta) = frac(1,2)EE_(bold(x) ~ p_("data"), ) [ ||s_(theta)(macron(bold(x)))-nabla_(macron(bold(x)))log q_(sigma)(macron(bold(x))|bold(x))||_2^2 ]
+J(theta) = frac(1,2)EE_(bold(x) ~ p_("data"), ) [ norm(s_(theta)(macron(bold(x)))-nabla_(macron(bold(x)))log q_(sigma)(macron(bold(x))|bold(x)))_2^2 ]
 $
 
 注意此时 $nabla_(macron(bold(x)))log q_(sigma)(macron(bold(x))|bold(x))$ 还可以写为 $display(- frac(1, sigma) dot epsilon)$，其中 $epsilon$ 是从 $N(0, I)$ 中采样得到的噪声，原目标函数就变成
