@@ -539,7 +539,8 @@ $$
 
 > **定义 3. 22 （Markov 过程）**
 > 一个取值于 $\mathbb{R}^{n}$ 的随机过程 $\boldsymbol{X}(\cdot)$ 如果对一切 $0 \leqslant s \leqslant t$ 和一切 Borel 集 $B \in \mathbb{R}^{n}$，都满足 
-> $$P(\boldsymbol{X}(t) \in B|\mathcal{U}(s)) = P(\boldsymbol{X}(t) \in B|\boldsymbol{X}(s))\quad\text{a.s.}$$我们称其为一个 Markov 过程。
+> $$P(\boldsymbol{X}(t) \in B|\mathcal{U}(s)) = P(\boldsymbol{X}(t) \in B|\boldsymbol{X}(s))\quad\text{a.s.}$$
+> 我们称其为一个 Markov 过程。
 
 可以看出 Markov 过程中 $\boldsymbol{X}(s)$ 所包含的 “信息” 和给定一段历史 $\mathcal{U}(s)$ 所包含的信息相当：它只 “记得” 当前的状态，而不记得来时的路。
 
