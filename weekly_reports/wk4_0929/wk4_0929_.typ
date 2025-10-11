@@ -11,7 +11,7 @@
 #show: thmrules.with(qed-symbol: $square$)
 
 // metadata
-#let wk_report_name = "2025年9月29日至10月5日周报"
+#let wk_report_name = "2025年9月29日至10月12日周报"
 #let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
 
 // Snippets
@@ -190,14 +190,23 @@ for name, param in model.named_parameters():
 
 此方法来源于 https://stackoverflow.com/a/58533398
 
-=== 不变性和群等变 CNN
+=== 群等变 CNN
 
 
+=== 在不同规则的演化系统上的实验结果
+==== 调整通常卷积网络参数和权重稀疏化后的结果
+===== 训练曲线
 
-=== 实验结果
+===== 预测结果
 
 
-=== 对模型权重的解释
+==== 以上改动基础上将网络改为群等变CNN后的结果
+===== 训练曲线
+
+===== 预测结果
+
+
+=== 对模型的可视化的解释
 ==== 训练完毕的神经网络作为生命游戏模拟器
 
 
@@ -295,23 +304,23 @@ uv 是基于 Rust 的新一代 Python 包管理器，具有可迁移性强、快
 === Pytorch CUDA 版本的配置
 若不特意配置，在通过 uv 在环境中添加或下载 Pytorch 时自动下载的是 CPU 版本，无法享受硬件加速。假设系统中 CUDA 的版本是 11.8，可以在 `pyproject.toml` 中配置
 
-```toml
-[[tool.uv.index]]
-name = "pytorch-cu118"
-url = "https://download.pytorch.org/whl/cu118"
-explicit = true
-[tool.uv.sources]
-torch = [
-  { index = "pytorch-cu118", marker = "sys_platform == 'win32'" }
-]
-torchvision = [
-  { index = "pytorch-cu118", marker = "sys_platform == 'win32'" }
-]
-```
-然后运行 `uv sync` 或执行下面的代码强制重新下载：
-```bash
-uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --force-reinstall
-```
+// ```toml
+// [[tool.uv.index]]
+// name = "pytorch-cu118"
+// url = "https://download.pytorch.org/whl/cu118"
+// explicit = true
+// [tool.uv.sources]
+// torch = [
+//   { index = "pytorch-cu118", marker = "sys_platform == 'win32'" }
+// ]
+// torchvision = [
+//   { index = "pytorch-cu118", marker = "sys_platform == 'win32'" }
+// ]
+// ```
+// 然后运行 `uv sync` 或执行下面的代码强制重新下载：
+// ```bash
+// uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --force-reinstall
+// ```
 
 == Typst 相关
 
@@ -320,6 +329,37 @@ uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu
 
 
 == Python 相关
+=== 猴子补丁
+
+在使用 `pyseagull` 这个包时，我对它的源码进行了一些改动。这导致这些改动在其他机器上搭建环境时不可迁移。解决此问题的方法是使用 Python 的*猴子补丁*。它利用 Python 的灵活性，直接覆盖包中的某些函数或类参数。以 `pyseagull` 为例，假如我需要修改它的 `life_rule` 函数，而 `life_rule` 又要用到 `_parse_rulestring` 和 `_count_neighbors`，就可以像下面这样写
+
+```python
+from seagull.rules import life_rule
+
+def life_rule_monkey_patch(X: np.ndarray, rulestring: str) -> np.ndarray:
+    """
+    Monkey Patch for function `life_rule`. 
+    Add support for Von Neumann Neighborhood.
+    """
+    ...
+
+def _parse_rulestring_monkey_patch(r: str) -> Tuple[List[int], List[int]]:
+    """
+    Add support for Von Neumann Neighborhood.
+    """
+    ...
+
+def _count_neighbors_monkey_patch(X: np.ndarray, von_neumann: bool) -> np.ndarray:
+    """
+    Add support for Von Neumann Neighborhood.
+    """
+    ...
+
+# Apply monkey patch
+life_rule = life_rule_monkey_patch
+```
+
+将这段代码放在前面，执行时就会对 `seagull` 的 `life_rule` 函数做直接的替换，以实现自定义的新功能。对于类变量，也是同理。
 
 == 深度学习相关
 
