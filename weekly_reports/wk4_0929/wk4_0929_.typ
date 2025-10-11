@@ -17,6 +17,8 @@
 // Snippets
 #let const = "constant"
 #let bx = $bold(x)$
+#let by = $bold(y)$
+#let bz = $bold(z)$
 #let mx = $macron(bx)$
 #let pd = $p_("data")$
 #let ps = $p_(sigma)$
@@ -63,6 +65,7 @@
 ): set figure.caption(position: top)
 
 #set math.equation(numbering: "(1)")
+#set math.mat(delim: ("[", "]"), align: center)
 #set heading(numbering: "1.")
 #set math.cases(gap: 0.5em)
 #align(
@@ -276,6 +279,94 @@ Jonathan Ho, Ajay Jain and Pieter Abbeel | https://arxiv.org/abs/2006.11239
 
 
 #pagebreak()
+== Group Equivariant Convolutional Networks
+- Taco S. Cohen and Max Welling
+- https://arxiv.org/abs/1602.07576
+
+=== 何为等变，等变何为
+
+#h(2em)考虑线性空间 $V$ 和上面的一个变换群 $G$，我们称之为 $G$-空间。对于线性空间上的一个函数 $Phi$，如果它满足
+$
+  Phi(T_g x) = T'_g Phi(x)
+$
+其中 $T_g$ 是指对 $V$ 中的向量做对应于群元 $g$ 的变换。$T$ 和 $T'$ 不必相同，但必须要是 $G$ 中元素的线性表示，即满足对任意 $g, h in G$，有 $T(g h) = T(g) T(h)$。
+
+为什么我们需要等变性？众所周知，CNN 的卷积模块对输入使用了共用参数的一个卷积核，因此具有平移等变性（直觉就能看出，稍后证明），但对旋转或是更复杂的变换没有等变性。相比之下，人眼可以识别出一个在我们所居住的三维空间中以任意可能姿态出现的同一物体：不管它是出现在什么位置、什么姿态、还是镜中或水中的倒影。在图像中，我们也可以轻易看出被平移、旋转或是镜像后的图像包含的还是原来的那个物体，而我们希望将神经网络也加入某种“几何先验”，让神经网络也具备这样的能力。
+
+#figure(
+  image("image.png", width: 60%),
+  caption: [人眼的旋转等变性——对等变模型的期望]
+)
+
+=== 对称群
+
+两个对于图像而言典型的对称群分别为 $p 4$ 和 $p 4 m$。前者是包含了 $ZZ^2$ 上的所有平移变换和以 $display(pi/2)$ 为单位的旋转变换，它有下面的表示：
+$
+g(r, u, v) = mat(
+  cos((r pi)/2), -sin((r pi)/2), u;
+  sin((r pi)/2), #h(0.84em) cos((r pi)/2), v;
+  0, 0, 1
+)
+$
+其中 $r in \{0, 1, 2, 3\}$，$(u, v) in ZZ^2$。群元作用在向量上的结果就可以写为
+$
+  g x tilde.eq mat(
+  cos((r pi)/2), -sin((r pi)/2), u;
+  sin((r pi)/2), #h(0.84em) cos((r pi)/2), v;
+  0, 0, 1
+) mat(
+  u'; v'; 1
+)
+$
+类似地，$p 4 m$ 也有类似的表示：
+$
+g(r, u, v, m) = mat(
+  (-1)^m cos((r pi)/2), - (-1)^m sin((r pi)/2), u;
+  #h(3em) sin((r pi)/2), #h(3.84em) cos((r pi)/2), v;
+  0, 0, 1
+)
+$
+
+=== 特征图的信号视角
+
+对于形状为 `[c, w, h]` 的特征图 `F`，为推到方便起见，我们可以将其看作是下面的函数：
+$
+F: ZZ^2 &-> RR^c \
+(x, y) &|-> cases(mono(F[:, x, y])","#h(1.5em) & x in [0, w-1] "," y in [0, h-1], bold(0)"," &"otherwise")
+$
+这样就可以建立和 $RR$ 上函数之间卷积操作类似的表达式。对于一个信号 $F$，我们定义群元素 $g$ 作用在其上的结果为
+$
+  L_g f(x) = f(g^(-1) x).
+$
+其中 $L_g$ 是对应于群元 $g$ 之变换 $T_g$ 的一个实例化，并满足 $L_g L_h = L_(g h)$。它的直观理解是，假如 $L_g$ 是一个向左的平移变换，则 $L_g f(x)$ 就将信号（例如图片）向左平移 $c$，则平移后图片中给定位置的像素值就等于原图片中向右平移相同距离的像素值，也即 $f(x+c)$。
+
+=== 通常卷积模块的等变性 
+
+#h(2em)首先回忆 CNN 中的卷积操作 $*$ 和相关操作 $star$，它们在 CNN 的前向传播和反向传播中成对出现。考虑特征图 $f: ZZ^2 -> RR^(K^((l)))$ 和一组中的某个卷积核 $psi^((i)) : ZZ^2 -> RR^(K^((l)))$，有
+$
+[f * psi](bx) &= sum_(by in ZZ^2) sum_(k=1)^(K^((l))) f_k (bold(y)) psi^i_k (bx - by)#h(2em) & "convolution"\ 
+[f star psi](bx) &= sum_(by in ZZ^2) sum_(k=1)^(K^((l))) f_k (bold(y)) psi^i_k (by - bx) & "correlation"\ 
+$
+现在我们验证相关操作的平移等变性。考虑 $ZZ^2$ 上的平移群元 $t$ 对应的变换 $L_t$，有
+$
+[(L_t f) star psi](bx) 
+&= sum_(by in ZZ^2) sum_(k=1)^(K^((l))) [L_t f_k] (bold(y)) psi^((i))_k (by - bx) \  
+&= sum_(by in ZZ^2) sum_(k=1)^(K^((l))) f_k (bold(y) - bold(t)) psi^((i))_k (by - bx) \ 
+&= sum_(bold(z) in ZZ^2) sum_(k=1)^(K^((l))) f_k (bold(z)) psi_k^((i))(bold(z) - (bx - bold(t)))#h(2em) & bold(z) <- by - bold(t)\ 
+&= [f star psi](bx - bold(t)) = [L_t [f star psi]](bx).
+$
+但是相关变换对旋转没有等变性，对于 $p 4$ 中的群元 $r$ 对应的旋转变换 $L_r$，有：
+$
+[(L_r f) star psi](bx) 
+&= sum_(by in ZZ^2) sum_(k=1)^(K^((l))) [L_r f_k] (by) psi^((i))_k (by - bx) \
+&= sum_(by in ZZ^2) sum_(k=1)^(K^((l))) f_k (r^(-1)by) psi^((i))_k (by - bx) \
+&= sum_(bz in ZZ^2) sum_(k=1)^(K^((l))) f_k (bz) psi^((i))_k (r bz - bx) #h(2em) & bz <- r^(-1)bold(y)\
+$
+$
+&= sum_(bz in ZZ^2) sum_(k=1)^(K^((l))) f_k (bz) psi^((i))_k (r (bz - r^(-1)bx))\
+&= sum_(bz in ZZ^2) sum_(k=1)^(K^((l))) f_k (bz) [L_(r^(-1)) psi^((i))_k] (bz - r^(-1)bx)\
+&= [f star L_(r^(-1)) psi](r^(-1) bx) = L_r [f star L_(r^(-1)) psi] (bx)
+$
 
 #pagebreak()
 
