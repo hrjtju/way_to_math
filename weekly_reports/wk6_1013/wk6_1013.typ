@@ -11,8 +11,7 @@
 #show: thmrules.with(qed-symbol: $square$)
 
 // metadata
-
-#let wk_report_name = "2025年9月29日至10月12日周报"
+#let wk_report_name = "2025年10月13日至10月19日周报"
 #let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
 
 // Snippets
@@ -673,10 +672,6 @@ life_rule = life_rule_monkey_patch
 + 随机微分方程
   - 完成第四章 随机积分
   - 第五章 随机微分方程 开头
-
-
-#pagebreak()
-= 参考资料
 
 
 
