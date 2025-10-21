@@ -160,82 +160,82 @@
 
 
 #pagebreak()
-== 微型抗癌机器人在血液中的动力学
-=== 项目目的
+// == 微型抗癌机器人在血液中的动力学
+// === 项目目的
 
-微型抗癌机器人是通过癌症细胞散发出的化学吸引物 (chemoattractant) 趋化性驱动 (chemotaxis-driven) 运动，与癌细胞进行配体-受体结合后定向释放药物，达到治疗的目的。本项目研究理想状况下的微型抗癌机器人集群在血液中的动力学。
+// 微型抗癌机器人是通过癌症细胞散发出的化学吸引物 (chemoattractant) 趋化性驱动 (chemotaxis-driven) 运动，与癌细胞进行配体-受体结合后定向释放药物，达到治疗的目的。本项目研究理想状况下的微型抗癌机器人集群在血液中的动力学。
 
-=== 建模
+// === 建模
 
-目前项目对血液中的化学吸引物、游离的微型机器人和与癌细胞结合的微型机器人分布进行建模。设 $t$ 时刻，位于血液中 $bx$ 位置的化学吸引物浓度为 $c(bx, t)$，化学吸引物正常的消耗或讲解速率为 $k$， ，则有
-$
-(partial c)/(partial t) = D_c nabla^2 c - k c + S_(Omega_t)(bx)
-$
-其中 
-- $D_c$ 为化学吸引物在血液中的扩散系数
-- $k$ 为化学吸引物正常的消耗或讲解速率
-- $Omega_t$ 为癌细胞所在区域，$S_(Omega_t)(bx)$ 为癌细胞区域中 $bx$ 位置向血液中释放化学吸引物的速度
-类似地，设 $rho(bx, t)$ 为游离机器人血液中的分布密度，$b(bx, t)$ 为非游离的机器人的分布密度，有
-$
-(partial rho)/(partial t) 
-  &= D_rho nabla^2 rho - nabla dot (chi rho nabla c) - k_b rho delta_(Omega_t) + k_u b \
-(partial b)/(partial t) 
-  &= k_b rho delta_(Omega_t) - k_u b 
-$
-其中
-- $D_rho$ 为游离机器人在血液中的扩散系数
-- $k_b$ 为游离机器人绑定癌细胞的速率
-- $k_u$ 为绑定癌细胞的机器人释放药物后和癌细胞解绑的速率
-- $chi$ 为机器人逆浓度梯度制导的成功率
+// 目前项目对血液中的化学吸引物、游离的微型机器人和与癌细胞结合的微型机器人分布进行建模。设 $t$ 时刻，位于血液中 $bx$ 位置的化学吸引物浓度为 $c(bx, t)$，化学吸引物正常的消耗或讲解速率为 $k$， ，则有
+// $
+// (partial c)/(partial t) = D_c nabla^2 c - k c + S_(Omega_t)(bx)
+// $
+// 其中 
+// - $D_c$ 为化学吸引物在血液中的扩散系数
+// - $k$ 为化学吸引物正常的消耗或讲解速率
+// - $Omega_t$ 为癌细胞所在区域，$S_(Omega_t)(bx)$ 为癌细胞区域中 $bx$ 位置向血液中释放化学吸引物的速度
+// 类似地，设 $rho(bx, t)$ 为游离机器人血液中的分布密度，$b(bx, t)$ 为非游离的机器人的分布密度，有
+// $
+// (partial rho)/(partial t) 
+//   &= D_rho nabla^2 rho - nabla dot (chi rho nabla c) - k_b rho delta_(Omega_t) + k_u b \
+// (partial b)/(partial t) 
+//   &= k_b rho delta_(Omega_t) - k_u b 
+// $
+// 其中
+// - $D_rho$ 为游离机器人在血液中的扩散系数
+// - $k_b$ 为游离机器人绑定癌细胞的速率
+// - $k_u$ 为绑定癌细胞的机器人释放药物后和癌细胞解绑的速率
+// - $chi$ 为机器人逆浓度梯度制导的成功率
 
-=== 局限性
+// === 局限性
 
-- 没有考虑机器人密度增大后的互相碰撞问题
-- 没有考虑血流对化学吸引物扩散和机器人运动的影响
-- 没有考虑血液中的其他细胞对机器人的影响
+// - 没有考虑机器人密度增大后的互相碰撞问题
+// - 没有考虑血流对化学吸引物扩散和机器人运动的影响
+// - 没有考虑血液中的其他细胞对机器人的影响
 
-#pagebreak()
-= 文献阅读
+// #pagebreak()
+// = 文献阅读
 
-== Denoising Diffusion Probabilistic Models #cite(<DBLP:paper-DDPM>)
-Jonathan Ho, Ajay Jain and Pieter Abbeel | https://arxiv.org/abs/2006.11239
+// == Denoising Diffusion Probabilistic Models #cite(<DBLP:paper-DDPM>)
+// Jonathan Ho, Ajay Jain and Pieter Abbeel | https://arxiv.org/abs/2006.11239
 
-本周把 DDPM 的剩余部分补完。
+// 本周把 DDPM 的剩余部分补完。
 
-=== 补遗
-
-
-=== 实验结果
+// === 补遗
 
 
-=== 总结和讨论
+// === 实验结果
+
+
+// === 总结和讨论
 
 
 
-参考资料
-+ https://arxiv.org/abs/1907.05600
-+ https://arxiv.org/abs/2006.11239
-+ https://lilianweng.github.io/posts/2021-07-11-diffusion-models/#nice
+// 参考资料
+// + https://arxiv.org/abs/1907.05600
+// + https://arxiv.org/abs/2006.11239
+// + https://lilianweng.github.io/posts/2021-07-11-diffusion-models/#nice
 
-#pagebreak()
-== Sliced Score Matching: A Scalable Approach to Density and Score Estimation #cite(<DBLP:paper-yang_song-sliced_score_matching>)
+// #pagebreak()
+// == Sliced Score Matching: A Scalable Approach to Density and Score Estimation #cite(<DBLP:paper-yang_song-sliced_score_matching>)
 
-- Yang Song, Sahaj Garg, Jiaxin Shi, Stefano Ermon 
-- https://arxiv.org/abs/1905.07088
+// - Yang Song, Sahaj Garg, Jiaxin Shi, Stefano Ermon 
+// - https://arxiv.org/abs/1905.07088
 
 
-#pagebreak()
+// #pagebreak()
 
-== General E(2)-Equivariant Steerable CNNs #cite(<DBLP:paper-e2cnn>)
+// == General E(2)-Equivariant Steerable CNNs #cite(<DBLP:paper-e2cnn>)
 
-- Maurice Weiler and Gabriele Cesa
-- https://arxiv.org/abs/1911.08251
+// - Maurice Weiler and Gabriele Cesa
+// - https://arxiv.org/abs/1911.08251
 
-#pagebreak()
+// #pagebreak()
 
 = 学习进度
-== 机器学习理论
-=== Markov Chain Monte Carlo (MCMC)
+// == 机器学习理论
+// === Markov Chain Monte Carlo (MCMC)
 
 
 == 随机过程
@@ -298,22 +298,23 @@ $
 #h(2em)本周没有推进。
 
 #pagebreak()
-= 问题解决记录
-== uv 相关
-uv 是基于 Rust 的新一代 Python 包管理器，具有可迁移性强、快速、简单的特点。
+// = 问题解决记录
+// == uv 相关
+// uv 是基于 Rust 的新一代 Python 包管理器，具有可迁移性强、快速、简单的特点。
 
-=== Pytorch CUDA 版本的配置
-
-
-== Typst 相关
-
-=== 数学公式自动编号
+// === Pytorch CUDA 版本的配置
 
 
+// == Typst 相关
 
-== Python 相关
+// === 数学公式自动编号
 
-#pagebreak()
+
+
+// == Python 相关
+
+// #pagebreak()
+
 = 下周计划
 *论文阅读*
 + 生成模型
@@ -326,8 +327,8 @@ uv 是基于 Rust 的新一代 Python 包管理器，具有可迁移性强、快
 
 *项目进度*
 + 使用神经网络学习生命游戏的演化动力学
-  - 收集实验数据，若有必要，实现更小的 $p 4$-等变 CNN 模型并测试
   - 尝试对模型权重进行解释，并用模型作为系统的演化模拟器，统计验证所学到的规则是否正确
+  - 重新生成部分规则下的生命游戏演化数据
 + 微型抗癌机器人在血液中的动力学
   - 开始学习 PDE 的数值解方法
 
@@ -338,7 +339,6 @@ uv 是基于 Rust 的新一代 Python 包管理器，具有可迁移性强、快
 + 随机微分方程
   - 完成第四章 随机积分
   - 第五章 随机微分方程 开头
-
 
 #pagebreak()
 #bibliography("refs.bib",   // 你的 BibTeX 文件
