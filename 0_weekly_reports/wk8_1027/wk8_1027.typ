@@ -116,7 +116,7 @@
 
 Yang Song et al. | https://arxiv.org/abs/2011.13456
 
-本文从 SDE 的视角统一了先前的 Langevin 退火的 score matching 方法 SMLD#cite(<DBLP:paper-SMLD>)和原版扩散模型 DDPM#cite(<DBLP:paper-DDPM>)，从它们的共同点出发，先将加噪动力学连续化变成 SDE，再利用已有的逆向SDE 解析解，得到与加噪 SDE 相反演化方向的逆向 SDE；最后从 SMLD 和 DDPM 逆向求解的数值算法提出了新的预测-校正方法和概率流 ODE 方法。可以说本文所提出的是随机采样的改进，神经网络扮演的角色仅仅为 $nabla log p(bx)$ 的逼近器，不是本文的重点。
+本文从 SDE 的视角统一了先前的 Langevin 退火的 score matching 方法 SMLD#cite(<DBLP:paper-SMLD>)和原版扩散模型 DDPM#cite(<DBLP:paper-DDPM>)，从它们的共同点出发，先将加噪动力学连续化变成 SDE，再利用已有的逆向SDE 解析解，得到与加噪 SDE 相反演化方向的逆向 SDE；最后从 SMLD 和 DDPM 逆向求解的数值算法提出了新的预测-校正方法和概率流 ODE 方法。可以说本文所提出的是随机采样的改进，神经网络扮演的角色仅仅为 $nabla log p(bx)$ 的逼近器，它不是本文的重点。
 
 === Score matching: SMLD 和 DDPM
 
@@ -159,11 +159,11 @@ $
   &approx bx(t) - 1/2 beta(t) bx(t) Delta t + sqrt(beta(t)) (Delta t)^(1/2) bold(z)(t) \
   dd bx &= -1/2 beta(t) bx dd t + sqrt(beta(t)) dd bold(w) & dd bold(w) ~ (dd t)^(1/2) bold(epsilon)
 $
-如果 DDPM 中的噪声表不是线性变化的，那将得到一个形式类似，但 $bold(f)$ 和 $g$ 不同的 SDE。上文中，SMLD 的加噪 SDE 被称为是 variance exploding (VE) 的，而 DDPM 的加噪 SDE 被称为是 variance preserving (VP) 的。作者还构造出一种 sub-VP SDE，加噪 SDE 为
+如果 DDPM 中的噪声表不是线性变化的，那将得到一个形式类似，但 $bold(f)$ 和 $g$ 不同的 SDE。上文中，SMLD 的加噪 SDE 被称为是 *variance exploding (VE)* 的，而 DDPM 的加噪 SDE 被称为是 *variance preserving (VP)* 的。作者还构造出一种 *sub-VP SDE*，加噪 SDE 为
 $
   dd bx = -1/2 beta(t) bx dd t + underbrace(sqrt(beta(t) (1 - e^(- 2 int_0^t beta(s) dd s))), sqrt(macron(beta)(t))) dd bold(w).
 $
-其方差被 VP-SDE 的方差控制。
+其方差被 VP-SDE 的方差控制。以上三种 SDE 的一维特殊情形的方差推导可见附录，对特殊情形的讨论可以很容易看书这三种 SDE 叫做 VE，VP 以及 sub-VP SDE 的原因。
 
 === 求解逆向 SDE
 
@@ -182,7 +182,7 @@ $
 $
   bold(theta)^* = argmin_(bold(theta)) EE_t [lambda(t) EE_(bx(0), bx(t)|bx(0)) [ norm(bs_theta (bx(t), t) - nabla_(bx(t)) log p_(0, t) (bx(t)|bx(0)) )_2^2]]
 $
-其中 $lambda(t)$ 是正的权重函数，$t$ 在 $[0, T]$ 上均匀采样。可以取 $lambda prop EE [ norm(nabla_(hat(bx)) log p_(0, t) (bx(t)|bx(0)) )_2^2]$，使得每个 $t$ 下的损失项对总损失的平均贡献相同。
+其中 $lambda(t)$ 是正的权重函数，$t$ 在 $[0, T]$ 上均匀采样。可以取 $lambda prop EE [ norm(nabla_(hat(bx)) log p_(0, t) (bx(t)|bx(0)) )_2^2]$，使得每个 $t$ 下的损失项对总损失的平均贡献相同。剩余的问题来自于如何求解 $p_(0, t) (bx(t)|bx(0))$，或者说转移核。*如果 $bold(f)(dot, t)$ 是仿射函数，转移核是 Gauss 分布的密度函数，其参数均值和方差拥有闭式解；而对于一般的 SDE，需要求解 Kolmogorov 前向方程才能得到 $p_(0, t) (bx(t)|bx(0))$。*但如果不使用加噪技巧，而是使用*分片分数匹配*以计算目标函数，就可以规避计算转移核的困难（见附录）。
 
 剩下的问题就变成了如何用这个逆向 SDE 采样。
 
@@ -269,11 +269,9 @@ Zhengyang Geng et al. | https://doi.org/10.48550/arXiv.2505.13447
 
 #pagebreak()
 = 附录
-== 卷积权重可视化代码
 
 
-
-== VE-SDE、VP-SDE 和 sub-VP SDE 方差推导
+== 一维特殊情形的 VE-SDE、VP-SDE 和 sub-VP SDE 方差推导
 
 可以这样直观理解：假设 $x$ 都是标量随机过程，对 SMLD 的加噪过程，有
 $
@@ -331,6 +329,8 @@ $
 $
 一些简单的推导，可以得出 sub-VP SDE 的方差小于等于 VP-SDE 的方差。
 
-// == 逆向 SDE 推导
+== 逆向 SDE 推导
+
+
 
 
