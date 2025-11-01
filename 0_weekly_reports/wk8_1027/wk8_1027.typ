@@ -13,13 +13,22 @@
 // Snippets
 #let const = "constant"
 #let bs = $bold(s)$
+#let bf = $bold(f)$
+#let bF = $bold(F)$
+#let bg = $bold(g)$
+#let bG = $bold(G)$
 #let bx = $bold(x)$
+#let bX = $bold(X)$
+#let bW = $bold(W)$
 #let by = $bold(y)$
 #let bz = $bold(z)$
-#let fg = $frak(g)$
-#let fh = $frak(h)$
-#let fu = $frak(u)$
-#let fp = $frak(p)$
+#let bZ = $bold(Z)$
+#let mtxId = $bold(I)$
+#let vec0 = $bold(0)$
+// #let fg = $frak(g)$
+// #let fh = $frak(h)$
+// #let fu = $frak(u)$
+// #let fp = $frak(p)$
 #let mx = $macron(bx)$
 #let pd = $p_("data")$
 #let ps = $p_(sigma)$
@@ -97,20 +106,20 @@
 #pagebreak()
 = 文献阅读
 
-// == Denoising Diffusion Probabilistic Models #cite(<DBLP:paper-DDPM>)
-// Jonathan Ho, Ajay Jain and Pieter Abbeel | https://arxiv.org/abs/2006.11239
+== Denoising Diffusion Probabilistic Models #cite(<DBLP:paper-DDPM>)
+Jonathan Ho, Ajay Jain and Pieter Abbeel | https://arxiv.org/abs/2006.11239
 
-// 本周把 DDPM 的剩余部分补完。
+本周把 DDPM 的剩余部分补完。
 
-// === 补遗
-
-
-// === 实验结果
+=== 补遗
 
 
-// === 总结和讨论
+=== 实验结果
 
-// #pagebreak()
+
+=== 总结和讨论
+
+#pagebreak()
 
 == Score-based generative modeling through SDE #cite(<DBLP:paper-yang_song-score_based_generative_modeling_sde>)
 
@@ -187,6 +196,10 @@ $
 剩下的问题就变成了如何用这个逆向 SDE 采样。
 
 ==== 一般的 SDE 求解器
+
+
+
+
 ==== 预测-校正方法
 ==== 概率流 ODE
 === 可控生成
@@ -232,8 +245,54 @@ Zhengyang Geng et al. | https://doi.org/10.48550/arXiv.2505.13447
 接着我跳过 Poisson 过程，开始看 Markov 链的部分。
 
 == 随机微分方程
+=== 随机微分方程的数值模拟
 
-#h(2em)本周没有推进。
+#tab 考虑一个自守的 SDE 
+$
+  dd X = F(X) dd t + G(X) dd bold(W)
+$
+下面给出模拟它的三种方法。
+
+==== Euler-Maruyama 法
+
+Euler-Maruyama 法主要思想是 Brown 运动 $W(dot)$ 的增量独立性，即 $W(t + Delta t) - W(t) ~ cal(N)(0, 1)$，因此有
+$
+  X(t + Delta t) approx X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z
+$
+其中 $Z ~ cal(N)(0, 1)$
+
+==== Milstein 法
+
+Milstein 法相比于 Euler-Maruyama 法更细，来源于对 $display(int_t^(t+Delta t) G(X)dd W)$ 更精确的估计。其形式为
+$
+  X(t + Delta t) approx& X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z \ &+ 1/2 G(X) partial/(partial X)G(X)[Z^2t - (Delta t)^2]
+$
+
+对 $dd G(X)$ 应用 #ito 公式，有
+$
+  dd G(X) = [G_x F + 1/2 G_(x x)G^2]dd t + G_x G dd W approx G_x F  dd t + G_x G dd W
+$
+
+
+==== 随机 Runge-Kutta 法
+
+== 信息论
+=== 熵
+
+#tab 
+
+=== 交叉熵
+#tab 
+
+
+=== KL 散度
+#tab 
+
+
+=== 后验熵
+#tab 
+
+
 
 #pagebreak()
 // = 问题解决记录
