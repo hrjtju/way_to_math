@@ -111,13 +111,13 @@ Jonathan Ho, Ajay Jain and Pieter Abbeel | https://arxiv.org/abs/2006.11239
 
 本周把 DDPM 的剩余部分补完。
 
-=== 补遗
+=== DDPM 的信息论视角
 
 
-=== 实验结果
+=== DDPM 和自回归生成模型的比较
 
 
-=== 总结和讨论
+=== 实验、总结和讨论
 
 #pagebreak()
 
@@ -215,6 +215,12 @@ $
 
 Zhengyang Geng et al. | https://doi.org/10.48550/arXiv.2505.13447
 
+=== 流匹配
+
+=== 平均流
+
+=== 带引导的平均流
+
 #pagebreak()
 // == Sliced Score Matching: A Scalable Approach to Density and Score Estimation #cite(<DBLP:paper-yang_song-sliced_score_matching>)
 
@@ -268,26 +274,34 @@ $
   X(t + Delta t) approx& X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z \ &+ 1/2 G(X) partial/(partial X)G(X)[Z^2t - (Delta t)^2]
 $
 
-对 $dd G(X)$ 应用 #ito 公式，有
-$
-  dd G(X) = [G_x F + 1/2 G_(x x)G^2]dd t + G_x G dd W approx G_x F  dd t + G_x G dd W
-$
-
+其推导我还需要再看一下。
 
 ==== 随机 Runge-Kutta 法
 
 == 信息论
 === 熵
 
-#tab 
+#tab 给定一个分布 $p(x)$，它的*熵*定义为
+$
+  H(p) := EE_p [log p(x)] = int p(x) log p(x) dd x
+$
+它在信息论中的意义分布 $p$ 下编码 $x$ 所需的最小平均比特数
 
 === 交叉熵
-#tab 
 
+#tab 类似地，给定分布 $p(x)$ 和 $q(x)$，其互信息 $H(p, q)$ 定义为
+$
+  H(p, q) := EE_p [log q(x)] = int p(x) log q(x) dd x
+$
+它表示使用基于分布 $q$ 的最短编码方案编码服从分布 $p$ 的数据的平均比特数
 
 === KL 散度
-#tab 
 
+#tab KL 散度一般用于描述分布之间的差异，给定分布 $p(x)$ 和 $q(x)$，有 
+$
+  KL[p || q] = EE_p [log p(x)/q(x)] = H(p, q) - H(p)
+$
+它表示使用基于分布 $q$ 的最短编码方案编码服从分布 $p$ 的数据，相比于使用 $p$ 的最短编码方式造成的平均额外的比特数开销。
 
 === 后验熵
 #tab 
