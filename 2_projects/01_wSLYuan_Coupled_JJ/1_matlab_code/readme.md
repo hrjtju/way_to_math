@@ -1,0 +1,19 @@
+# Coupled Josephson Junctions
+
+# MATLAB^®^ files and corredponding Python files/functions
+
+| MATLAB^®^ File name            | Functionality                                                                                                | MATLAB^®^ file Dependance                                                        | Python Function/Class      | Python File                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------- | --------------------------- |
+| `analyze_phase_space.m`        | Analyze phase space dynamics for different coupling strengths and plot resilts                               | `simulate_coupled_junctions.m`                                                   | `analyze_phase_space()`    |                             |
+| `coupledJ.m`                   | Seems to be scratch version of `analyze_phase_space.m`                                                       | `simulate_coupled_junctions.m`                                                   | --                         | --                          |
+| `coupling_strength_study.m`    | Study effect of coupling strength on synchronization & Manual calculation of Pearson correlation coefficient | `simulate_coupled_junctions.m`                                                   |                            |                             |
+| `create_score_network.m`       | Create score neural network to estimate $\nabla \log p(x)$                                                   |                                                                                  | `ScoreNet`                 | `model.py`                  |
+| `detect_rare_events.m`         | Detect and analyze rare events in junction dynamics                                                          |                                                                                  | `detect_rare_events()`     | `coupled_junction.py`       |
+| `generate_training_data.m`     | Generate training data for score-based modeling of coupled Josephson junctions                               |                                                                                  | `generate_training_data()` | `generate_training_data.py` |
+| `infer_parameters.m`           | Infer junction parameters from observed dynamics using score function                                        |                                                                                  | `infer_params()`           | `coupled_junction.py`       |
+| `langevin_sampling.m`          | Generate samples using Langevin dynamics<br> - No Deep Learning Toolbox required                             |                                                                                  | `sample()`                 | `train_and_sample.py`       |
+| `run_complete_analysis.m`      | Complete analysis pipeline for coupled Josephson junctions                                                   | `generate_training_data.m`<br> `train_score_network.m`<br> `langevin_sampling.m` | `main()`                   | `main.py`                   |
+| `simulate_coupled_junctions.m` | Simulate coupled Josephson junctions with thermal noise                                                      |                                                                                  | `simulate()`               | `coupled_junctions.py`      |
+| `train_score_network.m`        | Train score network using denoising score matching                                                           |                                                                                  | `train()`                  | `train_and_sample.py`       |
+
+

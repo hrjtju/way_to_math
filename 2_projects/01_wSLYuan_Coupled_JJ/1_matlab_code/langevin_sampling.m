@@ -64,13 +64,13 @@ function score = predict_regression_net(net_weights, samples)
     % Assumes net_weights is a cell array of weights {W1, b1, W2, b2, ...}
     
     if ~iscell(net_weights)
-        % If it's not a cell array, assume it's a simple linear transform
+        % If it is not a cell array, assume it is a simple linear transform
         score = samples * net_weights;
         return;
     end
     
     % Forward pass through layers
-    activation = samples';
+    activation = samples_;
     
     for i = 1:2:length(net_weights)-1
         W = net_weights{i};
@@ -85,5 +85,5 @@ function score = predict_regression_net(net_weights, samples)
         end
     end
     
-    score = activation';
+    score = activation_;
 end
