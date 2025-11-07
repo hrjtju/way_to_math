@@ -10,7 +10,7 @@
 #show strong: set text(blue)
 #show: thmrules.with(qed-symbol: $square$)
 
-#set text(lang: "zh", font: "Kai")
+#set text(lang: "zh", font: ("New Computer Modern", "KaiTi"))
 
 // Snippets
 #let const = "constant"
@@ -21,6 +21,7 @@
 #let bG = $bold(G)$
 #let bx = $bold(x)$
 #let bX = $bold(X)$
+#let bw = $bold(w)$
 #let bW = $bold(W)$
 #let by = $bold(y)$
 #let bz = $bold(z)$
@@ -175,7 +176,7 @@ $
 Anderson 给出了上节中一般形式之加噪 SDE 的逆向 SDE，其形式为
 $
   dd bx = [ - bold(f)(bx, t) + g^2(t) nabla_(bx) log p_t (bx) ] dd t + g(t) dd bold(macron(w))  
-$
+$<eq:inverse-sde-cont>
 其中 $macron(bold(w))$ 是一个倒流的 Brown 运动，$dd t$ 是倒流的无穷小时间间隔。由于 $bold(f)$ 和 $g$ 已知，而 $nabla_(bx) log p_t (bx)$ 由神经网络估计。在 SMLD 中其总目标函数是
 
 $
@@ -189,11 +190,42 @@ $
 $
 其中 $lambda(t)$ 是正的权重函数，$t$ 在 $[0, T]$ 上均匀采样。可以取 $lambda prop EE [ norm(nabla_(hat(bx)) log p_(0, t) (bx(t)|bx(0)) )_2^2]$，使得每个 $t$ 下的损失项对总损失的平均贡献相同。剩余的问题来自于如何求解 $p_(0, t) (bx(t)|bx(0))$，或者说转移核。*如果 $bold(f)(dot, t)$ 是仿射函数，转移核是 Gauss 分布的密度函数，其参数均值和方差拥有闭式解；而对于一般的 SDE，需要求解 Kolmogorov 前向方程才能得到 $p_(0, t) (bx(t)|bx(0))$。*但如果不使用加噪技巧，而是使用*分片分数匹配*以计算目标函数，就可以规避计算转移核的困难（见附录）。
 
-剩下的问题就变成了如何用这个逆向 SDE 采样。
-
 ==== 一般的 SDE 求解器
 
+#tab 对于SDE的模拟，有若干数值方法，例如 *Euler-Maruyama 法*和*随机 Runge-Kutta 法*。DDPM 中提出的*祖先采样*也是和前二者类似的对逆向 VP-SDE 的一种离散化。
 
+===== 祖先采样 (Ancestral Sampling)
+
+#tab 我们可以得到 SMLD 版本的祖先采样。首先 SMLD 的 "加噪过程" 可以写为 $display(bx_i = bx_(i-1) + sqrt(sigma_i^2 - sigma_(i-1)^2) bz_(i-1))$，即 $p(bx_i | bx_(i-1)) ~ cal(N)(bx_(i-1), (sigma_i^2 - sigma_(i-1)^2) mtxId)$。接着我们考虑加噪 Markov 链 $x_0 -> x_1 -> dots.c -> x_N$，可以依照 DDPM 论文中的类似推导（#ref(<appendix:SMLD-ancestral>)）得到 $q(bx_(t-1)|bx_t, bx_0)$:
+$
+  q(bx_(t-1)|bx_t, bx_0) &= q(bx_t|bx_(t-1), bx_0) dot (q(bx_(t-1) | bx_0))/(q(bx_t | bx_0)) \
+  &= cal(N)( sigma_(t-1)^2/(sigma_t^2) bx_t 
+    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, sigma_t^2/((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2))
+$
+接着将参数分布 $p_(bold(theta))(bx_(i-1)|bx_i)$ 参数化为 $cal(N)(bx_(i-1); bold(mu)_(bold(theta))(bx_i, i), tau_i^2 mtxId)$，不难得 (#ref(<appendix:SMLD-ancestral>)) 到 DDPM 中的 $L_(t-1)$ 损失这一项可以写为
+$
+  L_(t-1) = EE_(bx_0, bold(z)) [1/(2 tau_i^2) norm(bx_i (bx_0, bz) - (sigma_i^2 - sigma_(i-1)^2)/(sigma_i) bz - bold(mu)_bold(theta)(bx_i (bx_0, bz), i))_2^2] + C
+$
+其中 $C$ 是一个无关常数。
+
+===== 逆向扩散采样器 (Reverse Diffusion Sampler)
+对一般 SDE 而言，要推导出它的 Ancestral 采样并不容易。对于此问题，作者根据逆向 SDE 提出了一种简单有效的离散化方法。考虑一般形式的 SDE $dd bx = bf(bx, t) dd t + bG(t) dd bw$，并固定离散化的时间点序列，可以得到前向 SDE 的离散版本:
+$
+  bx_(i+1) = bx_i + bf_i (bx_i) + bG_i bz_i, wide i=0, ..., N-1
+$
+根据#ref(<eq:inverse-sde-cont>)中的逆向 SDE 结果，立刻可以得到下面的采样迭代法，作者称之为*逆向扩散采样器*：
+$
+  bx_i = bx_(i+1) - bf_(i+1)(bx_(i+1)) + bG_(i+1)bG_(i+1)^top bs_(bold(theta)^*) (bx_(i+1), i+1) + bG_(i+1) bz_(i+1)
+$
+考虑 DDPM 的情形并对噪声序列进行适当标号，有：$bx_(i+1) = sqrt(1 - beta_(i)) bx_(i) + sqrt(beta_(i)) bold(z_i)$, 得到 $bf_i (bx_i) = [1- sqrt(1-beta_(i))]bx_i$，$bG_i = sqrt(beta_(i))$；其对应的逆向扩散采样为
+$
+  bx_i = [2 - sqrt(1-beta_(i+1))]bx_(i+1) + beta_(i+1) bs_(bold(theta)^*) (bx_(i+1), i+1) + sqrt(beta_(i+1)) bz_(i+1)
+$
+而 DDPM 中的 Ancestral 采样的形式为
+$
+  bx_(i) &= 1/sqrt(1 - beta_(i+1)) (bx_(i+1) - beta_(i+1) bs_theta (bx_(i+1), i+1)) + sqrt(beta_(i+1)) bold(z)_(i+1)
+$
+当 $beta_i -> 0$ 时，有 $display(1/sqrt(1 - beta_(i+1)) ~ 1 + 1/2 beta_(i+1) = 2 - [1 - 1/2 beta_(i+1)]) ~ 2 - sqrt(1 - beta_(i+1))$，$beta_(i+1)^2 -> 0$，因此此时逆向扩散采样和 DDPM 的 Ancestral 采样等价。
 
 
 ==== 预测-校正方法
@@ -235,11 +267,28 @@ Shenglan Yuan | 10.1016/j.chaos.2025.116917
 
 == 随机过程
 
-#h(2em)本周开始系统学习 Markov 链。
+#h(2em)本周继续系统学习 Markov 链。
 
 #pagebreak()
 
 == 随机微分方程
+=== #ito 链式法则和乘积法则的多维情形
+
+=== 典型的随机微分方程
+==== 股市模型
+
+==== Brown 桥
+
+==== Langevin 方程
+
+==== Ornstein–Uhlenbeck (OU) 过程
+
+==== 随机谐振子
+
+
+
+=== 解的存在性和唯一性
+
 === 随机微分方程的数值模拟
 
 #tab 考虑一个自守的 SDE 
@@ -312,6 +361,8 @@ $
   - 完成第四章 随机积分
   - 第五章 随机微分方程 开头
 
+
+
 #pagebreak()
 #bibliography("refs.bib",   // 你的 BibTeX 文件
               title: "参考文献",
@@ -319,68 +370,111 @@ $
               full: false
 )
 
-// #pagebreak()
+#pagebreak()
 
-// = 附录
-// == 一维特殊情形的 VE-SDE、VP-SDE 和 sub-VP SDE 方差推导
+= 附录
+== 一维特殊情形的 VE-SDE、VP-SDE 和 sub-VP SDE 方差推导
 
-// 可以这样直观理解：假设 $x$ 都是标量随机过程，对 SMLD 的加噪过程，有
-// $
-//   "Var"[x(t)]
-//   &="Var"[x(t)-x(0)]\
-//   &="Var" [int_0^t sqrt(2 sigma sigma') dd w ] = int_0^t 2 sigma sigma' dd tau & #ito "等式"\
-//   &= sigma^2(t) - sigma^2(0) & "换元积分法" 
-// $
-// 对 DDPM 的加噪过程，有一阶矩：
-// $
-//   dd EE[x(t)] 
-//   &= EE[dd x(t)] = -1/2 beta(t) EE[x(t)] dd t\
-//   (dd EE[x(t)])/(EE[x(t)]) &= -1/2 beta(t) dd t & "分离变量"\
-//   log(|EE[x(t)]|) &= -1/2 int_0^t beta(t) dd t + C ==> |EE[x(t)]| = C' e^(-1/2 int_0^t beta(t) dd t) & "积分"\
-//   EE[x(t)] &= e^(-1/2 int_0^t beta(t) dd t) EE[x(0)] & "假设"EE[x(0)] gt.slant 0\
-// $
-// 二阶矩：
-// $
-//   dd EE[x^2(t)] 
-//   &= EE[dd x^2(t)] = EE[2x(t) dd x(t) + beta(t) dd t] wide & #ito "乘积法则"\
-//   &= EE[x(t) (2 sqrt(beta(t)) dd w) - beta(t) x(t) dd t) + beta(t) dd t]\
-//   &= EE[ 2 x(t) sqrt(beta(t)) dd w] - beta(t) EE[x^2(t)] dd t + beta(t) dd t\
-//   EE[int_0^t dd x^2(t)] 
-//   &= underbrace(EE[ 2 int_0^t x(t) sqrt(beta(t)) dd w], 0) - int_0^t beta(tau) EE[x^2(tau)] dd tau + int_0^t beta(tau) dd tau  & "期望的线性性"\
-//   dd EE[x^2(t)] &= - beta(t) EE[x^2(t)] dd t + beta(t) dd t & "换回随机微分"\
-//   (dd EE[x^2(t)])/(1- EE[x^2(t)]) &= beta(t) dd t & "分离变量"\
-//   - log(|1 - EE[x^2(t)]|) &= int_0^t beta(t) dd t + C ==> |1-EE[x^2(t)]| = C' e^(- int_0^t beta(t) dd t) & "积分"\
-//   EE[x^2(t)] &= 1 - e^(- int_0^t beta(t) dd t) (1 - EE[x^2(0)]) & "假设"1-EE[x^2(t)] gt.slant 0\
-// $
-// 因此方差为
-// $
-//   "Var"[x(t)] 
-//   &= EE[x^2(t)] - (EE[x(t)])^2 \
-//   &= 1 - e^(- int_0^t beta(t) dd t) (1 - EE[x^2(0)]) - e^(- int_0^t beta(t) dd t) (EE[x(0)])^2 \
-//   &= 1 + e^(- int_0^t beta(t) dd t) ("Var"[x(0)] - 1) 
-// $
-// 因此当 $"Var"[x(0)] = 1$ 时，有 $x(t)$ 的方差恒为 1。
+可以这样直观理解：假设 $x$ 都是标量随机过程，对 SMLD 的加噪过程，有
+$
+  "Var"[x(t)]
+  &="Var"[x(t)-x(0)]\
+  &="Var" [int_0^t sqrt(2 sigma sigma') dd w ] = int_0^t 2 sigma sigma' dd tau & #ito "等式"\
+  &= sigma^2(t) - sigma^2(0) & "换元积分法" 
+$
+对 DDPM 的加噪过程，有一阶矩：
+$
+  dd EE[x(t)] 
+  &= EE[dd x(t)] = -1/2 beta(t) EE[x(t)] dd t\
+  (dd EE[x(t)])/(EE[x(t)]) &= -1/2 beta(t) dd t & "分离变量"\
+  log(|EE[x(t)]|) &= -1/2 int_0^t beta(t) dd t + C ==> |EE[x(t)]| = C' e^(-1/2 int_0^t beta(t) dd t) & "积分"\
+  EE[x(t)] &= e^(-1/2 int_0^t beta(t) dd t) EE[x(0)] & "假设"EE[x(0)] gt.slant 0\
+$
+二阶矩：
+$
+  dd EE[x^2(t)] 
+  &= EE[dd x^2(t)] = EE[2x(t) dd x(t) + beta(t) dd t] wide & #ito "乘积法则"\
+  &= EE[x(t) (2 sqrt(beta(t)) dd w) - beta(t) x(t) dd t) + beta(t) dd t]\
+  &= EE[ 2 x(t) sqrt(beta(t)) dd w] - beta(t) EE[x^2(t)] dd t + beta(t) dd t\
+  EE[int_0^t dd x^2(t)] 
+  &= underbrace(EE[ 2 int_0^t x(t) sqrt(beta(t)) dd w], 0) - int_0^t beta(tau) EE[x^2(tau)] dd tau + int_0^t beta(tau) dd tau  & "期望的线性性"\
+  dd EE[x^2(t)] &= - beta(t) EE[x^2(t)] dd t + beta(t) dd t & "换回随机微分"\
+  (dd EE[x^2(t)])/(1- EE[x^2(t)]) &= beta(t) dd t & "分离变量"\
+  - log(|1 - EE[x^2(t)]|) &= int_0^t beta(t) dd t + C ==> |1-EE[x^2(t)]| = C' e^(- int_0^t beta(t) dd t) & "积分"\
+  EE[x^2(t)] &= 1 - e^(- int_0^t beta(t) dd t) (1 - EE[x^2(0)]) & "假设"1-EE[x^2(t)] gt.slant 0\
+$
+因此方差为
+$
+  "Var"[x(t)] 
+  &= EE[x^2(t)] - (EE[x(t)])^2 \
+  &= 1 - e^(- int_0^t beta(t) dd t) (1 - EE[x^2(0)]) - e^(- int_0^t beta(t) dd t) (EE[x(0)])^2 \
+  &= 1 + e^(- int_0^t beta(t) dd t) ("Var"[x(0)] - 1) 
+$
+因此当 $"Var"[x(0)] = 1$ 时，有 $x(t)$ 的方差恒为 1。
 
-// 对于 sub-VP SDE，套用上面的结果，并记 $B(t) = int_0^t beta(s) dd s$，容易得到
-// $
-//   EE[x(t)] 
-//   &= e^(-1/2 int_0^t beta(t) dd t) EE[x(0)]\
-//   EE[x^2(t)]
-//   &= e^(-int_0^t beta(s) dd s) [int_0^t macron(beta)(tau) e^(int_0^tau beta(s) dd s) dd tau + EE[x^2(0)]] \
-//   &= e^(-int_0^t beta(s) dd s) [int_0^t beta(tau) (1 - e^(- 2 int_0^tau beta(s) dd s)) e^(int_0^tau beta(s) dd s) dd tau + EE[x^2(0)]] \
-//   &= e^(-B(t))EE[x^2(0)]] +  e^(-B(t))[int_0^t B'(tau) (1 - e^(- 2 B(tau))) e^(B(tau)) dd tau ]\
-//   &= 1 + e^(-2B(t)) + e^(-B(t))(EE[x^2(0)]] - 2)\ 
-// $ 
-// $
-//   "Var"[x(t)]
-//   &= EE[x^2(t)] - (EE[x(t)])^2 \
-//   &= 1 + e^(-2B(t)) + e^(-B(t))(EE[x^2(0)]] - 2) - e^(- B(t)) (EE[x(0)])^2 \
-//   &= 1 + e^(- B(t)) ("Var"[x(0)] - 2) + e^(-2 B(t)) \
-//   &= 1 + e^(- int_0^t beta(s) dd s) ("Var"[x(0)] - 2) + e^(-2 int_0^t beta(s) dd s)\
-// $
-// 一些简单的推导，可以得出 sub-VP SDE 的方差小于等于 VP-SDE 的方差。
+对于 sub-VP SDE，套用上面的结果，并记 $B(t) = int_0^t beta(s) dd s$，容易得到
+$
+  EE[x(t)] 
+  &= e^(-1/2 int_0^t beta(t) dd t) EE[x(0)]\
+  EE[x^2(t)]
+  &= e^(-int_0^t beta(s) dd s) [int_0^t macron(beta)(tau) e^(int_0^tau beta(s) dd s) dd tau + EE[x^2(0)]] \
+  &= e^(-int_0^t beta(s) dd s) [int_0^t beta(tau) (1 - e^(- 2 int_0^tau beta(s) dd s)) e^(int_0^tau beta(s) dd s) dd tau + EE[x^2(0)]] \
+  &= e^(-B(t))EE[x^2(0)]] +  e^(-B(t))[int_0^t B'(tau) (1 - e^(- 2 B(tau))) e^(B(tau)) dd tau ]\
+  &= 1 + e^(-2B(t)) + e^(-B(t))(EE[x^2(0)]] - 2)\ 
+$ 
+$
+  "Var"[x(t)]
+  &= EE[x^2(t)] - (EE[x(t)])^2 \
+  &= 1 + e^(-2B(t)) + e^(-B(t))(EE[x^2(0)]] - 2) - e^(- B(t)) (EE[x(0)])^2 \
+  &= 1 + e^(- B(t)) ("Var"[x(0)] - 2) + e^(-2 B(t)) \
+  &= 1 + e^(- int_0^t beta(s) dd s) ("Var"[x(0)] - 2) + e^(-2 int_0^t beta(s) dd s)\
+$
+一些简单的推导，可以得出 sub-VP SDE 的方差小于等于 VP-SDE 的方差。
 
-// == 逆向 SDE 推导
+== 逆向 SDE 推导
+
+
+
+== SMLD 的祖先采样<appendix:SMLD-ancestral>
+
+令 $sigma_0^2 = 0$，执行和 DDPM 类似的操作，有
+$
+& quad q(bx_(t-1) | bx_t, bx_0) \
+&= q(bx_t | bx_(t-1), bx_0) q(bx_(t-1) | bx_0) / q(bx_t | bx_0) \
+&= q(bx_t | bx_(t-1)) q(bx_(t-1) | bx_0) / q(bx_t | bx_0) \
+&prop exp lr(\{ -1/2 [ 
+  norm(bx_t - bx_(t-1))^2/(sigma_t^2 - sigma_(t-1)^2) 
+  + norm(bx_(t-1) - bx_(0))^2/(sigma_(t-1)^2) 
+  - norm(bx_t - bx_(0))^2/(sigma_t^2) 
+] \}) \
+&= exp lr(\{ -1/2 [ 
+  (
+    norm(bx_t)^2 
+    - 2 chevron.l bx_t, #text(red)[$bx_(t-1)$] chevron.r  
+    + norm(#text(red)[$bx_(t-1)$])^2
+  )/(sigma_t^2 - sigma_(t-1)^2) 
+  + (
+    norm(#text(red)[$bx_(t-1)$])^2 
+    - 2 chevron.l #text(red)[$bx_(t-1)$], bx_0 chevron.r  
+    + norm(bx_0)^2
+  )/(sigma_(t-1)^2)  \
+  & wide wide wide - (
+    norm(bx_t)^2 
+    - 2 chevron.l bx_t, bx_0 chevron.r  
+    + norm(bx_0)^2
+  )/(sigma_t^2) 
+] \}) \
+&= exp lr(\{ -1/2 [ 
+  sigma_t^2/((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2) #text(red)[$norm(bx_(t-1))^2$] 
+  - lr(
+    2 lr(chevron.l sigma_(t-1)^2/(sigma_t^2) bx_t 
+    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, 
+    #text(red)[$bx_(t-1)$] chevron.r) ) 
+  + const 
+] \}) \
+&prop cal(N)( sigma_(t-1)^2/(sigma_t^2) bx_t 
+    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, sigma_t^2/((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)) \
+$
 
 
 
