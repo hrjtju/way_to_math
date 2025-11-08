@@ -200,13 +200,16 @@ $
 $
   q(bx_(t-1)|bx_t, bx_0) &= q(bx_t|bx_(t-1), bx_0) dot (q(bx_(t-1) | bx_0))/(q(bx_t | bx_0)) \
   &= cal(N)( sigma_(t-1)^2/(sigma_t^2) bx_t 
-    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, sigma_t^2/((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2))
+    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, ((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)/sigma_t^2)
 $
 接着将参数分布 $p_(bold(theta))(bx_(i-1)|bx_i)$ 参数化为 $cal(N)(bx_(i-1); bold(mu)_(bold(theta))(bx_i, i), tau_i^2 mtxId)$，不难得 (#ref(<appendix:SMLD-ancestral>)) 到 DDPM 中的 $L_(t-1)$ 损失这一项可以写为
 $
   L_(t-1) = EE_(bx_0, bold(z)) [1/(2 tau_i^2) norm(bx_i (bx_0, bz) - (sigma_i^2 - sigma_(i-1)^2)/(sigma_i) bz - bold(mu)_bold(theta)(bx_i (bx_0, bz), i))_2^2] + C
 $
-其中 $C$ 是一个无关常数。
+其中 $C$ 是一个无关常数。接着就可以像 DDPM 那样得出采样生成的迭代规则：
+$
+  bx_(i-1) = underbrace(bx_i + (sigma_i^2 - sigma_(i-1)^2) bold(s)_(bold(theta)^*) (bx_i, i), bold(mu)_bold(theta)(bx_i, i)) + sqrt(((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)/sigma_t^2) bz_i
+$
 
 ===== 逆向扩散采样器 (Reverse Diffusion Sampler)
 对一般 SDE 而言，要推导出它的 Ancestral 采样并不容易。对于此问题，作者根据逆向 SDE 提出了一种简单有效的离散化方法。考虑一般形式的 SDE $dd bx = bf(bx, t) dd t + bG(t) dd bw$，并固定离散化的时间点序列，可以得到前向 SDE 的离散版本:
@@ -473,7 +476,7 @@ $
   + const 
 ] \}) \
 &prop cal(N)( sigma_(t-1)^2/(sigma_t^2) bx_t 
-    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, sigma_t^2/((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)) \
+    + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, ((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)/sigma_t^2) \
 $
 
 
