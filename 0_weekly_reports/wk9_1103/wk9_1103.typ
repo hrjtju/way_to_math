@@ -110,11 +110,31 @@
 = 项目进展
 == 使用神经网络学习生命游戏的演化动力学
 
-#tab 本周将 `CNN-small` 的层数从三层降低至两层，在 $8$ epoch 内可以成功收敛，其权重待分析。
+#tab 本周研究给出了框架总览，如#ref(<fig:life_framework>)所示。这是一个主动学习框架，其核心由三个部件组成：*黑盒数据供应代理 (black-box partial-trajectory provider, Provider)*（左上角灰色方框）、等变神经网络构成的*规则学习器 (equivariant rule learner, Learner)*和*显式规则提取模拟模块 (explicit rule extractor, Extractor)*。
 
-=== 下一步
+主动学习的设定为代理只能以随机初始状态按照某个未知的演化动力学生成一条固定尺度大小、固定长度的演化轨道，且不接受输入数据。每次生成一条演化轨道的开销巨大。因此我们需要*在尽可能复原未知的演化规则的情况下最小化向代理请求新轨道的次数*。
 
-#tab 目前将目标从提取显式的规则改为从已知部分规则和黑箱规则代理产生的少量数据，结合带有等变性的神经网络训练作为动力学仿真器。规则发现的具体流程是，从一些已知规则出发，首先根据一条有偏的轨道从一个规则空间中选取一系列的假设规则，在神经网络学习这条轨道后，再通过神经网络作为演化模拟器的演化统计结果，和原来的统计数据对比，以确定某些候选规则存在或不存在，从而逐步确定系统演化的真正动力学。
+为简化问题的复杂度，我们假定未知的动力学为 $bx_(t+1) = bf(bx_t)$ 的形式，且每个细胞的下一个状态（为 $0$ 或 $1$）仅取决于该细胞和至多扩展至 $3 times 3$ 邻域的细胞状态，且演化规则具有平移不变性，但对其他不变性如旋转不变性不做要求。
+
+#figure(
+  image("framework.png"),
+  caption: [方法框架总览],
+  placement: bottom
+)<fig:life_framework>
+
+=== 训练和神经网络模拟
+
+#tab 预训练进行一个轮次，用于确定所施加在网络中的等变约束。首先训练仅有平移不变性的网络，如 CNN，在收敛后检视其首层卷积核权重，根据所学的权重图像确定需要施加的等变群约束 $frak(G)$。在训练完毕后，使用训练好的神经网络作为演化模拟器，输入初始状态，得到模拟的演化序列 #tab 预训练进行一个轮次，用于确定所施加在网络中的等变约束。首先训练仅有平移不变性的网络，如 CNN，在收敛后检视其首层卷积核权重，根据所学的权重图像确定需要施加的等变群约束 $frak(G)$。在训练完毕后，使用训练好的神经网络作为演化模拟器，输入初始状态，得到模拟的演化序列 $\{bold(y)_t\}_(t=1)^T$。将演化序列与代理提供的真实序列比较，得到*模拟损失 (simulation loss) $cal(L)_1$*。
+
+在首轮训练后，等变群约束 $frak(G)$ 会施加至神经网络，我们优先考虑兼容的参数转移模式，以最大程度保留首轮训练得到的参数。通过施加等变约束，可以消除由于神经网络灵活性造成的权重噪声，并期望模拟损失和首轮模拟损失大小大致持平或有所下降。被考虑的群有 $p 4$, $p 4 m$ 等等。
+
+=== 规则提取和停机条件
+
+#tab 在每轮训练完毕后，我们将使用遍历所有 $3 times 3$ 规律之指示特征 *(indicator pattern)* 构成的*指示集 (indicator dataset)* 全部通过训练完毕的神经网络，并统计*显著*的规则结果。显著的条件为神经网络预测的似然大于某个阈值，例如 $0.9$。这样一来我们就收集了对应于神经网络参数 $bold(theta)$ 的显著规则集 $cal(R)_(bold(theta))$，并使用此规则至显示规则模拟模块，得到另一模拟的演化序列 $\{bold(z)_t\}_(t=1)^T$。使用该序列与真实序列比较，得到*规则损失 (rule loss) $cal(L)_2$*。
+
+*若规则损失和模拟损失均大于某阈值，则向代理请求一条新的轨道。如果规则损失为零或小于某给定的小数 $epsilon$，系统停机。此时的 $cal(R)_(bold(theta))$ 即为提取得到的规则。*
+
+值得一提的是，一旦等变群约束确定，其可以作为一等价关系 $~#h(-0.2em)_(frak(G))$ 商掉指示集中关于群元对应变变换的不同特征，从而加速得到规则的过程，且使规则更加简洁。
 
 #pagebreak()
 = 文献阅读
@@ -173,7 +193,7 @@ $
 
 === 求解逆向 SDE
 
-Anderson 给出了上节中一般形式之加噪 SDE 的逆向 SDE，其形式为
+本节介绍逆向 SDE 的解析解和数值解法。Anderson 给出了上节中一般形式之加噪 SDE 的逆向 SDE，其形式为
 $
   dd bx = [ - bold(f)(bx, t) + g^2(t) nabla_(bx) log p_t (bx) ] dd t + g(t) dd bold(macron(w))  
 $<eq:inverse-sde-cont>
@@ -202,7 +222,7 @@ $
   &= cal(N)( sigma_(t-1)^2/(sigma_t^2) bx_t 
     + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, ((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)/sigma_t^2)
 $
-接着将参数分布 $p_(bold(theta))(bx_(i-1)|bx_i)$ 参数化为 $cal(N)(bx_(i-1); bold(mu)_(bold(theta))(bx_i, i), tau_i^2 mtxId)$，不难得 (#ref(<appendix:SMLD-ancestral>)) 到 DDPM 中的 $L_(t-1)$ 损失这一项可以写为
+接着将参数分布 $p_(bold(theta))(bx_(i-1)|bx_i)$ 参数化为 $cal(N)(bx_(i-1); bold(mu)_(bold(theta))(bx_i, i), tau_i^2 mtxId)$，不难得到 (#ref(<appendix:SMLD-ancestral>)）DDPM 中的 $L_(t-1)$ 损失这一项可以写为
 $
   L_(t-1) = EE_(bx_0, bold(z)) [1/(2 tau_i^2) norm(bx_i (bx_0, bz) - (sigma_i^2 - sigma_(i-1)^2)/(sigma_i) bz - bold(mu)_bold(theta)(bx_i (bx_0, bz), i))_2^2] + C
 $
@@ -231,20 +251,71 @@ $
 当 $beta_i -> 0$ 时，有 $display(1/sqrt(1 - beta_(i+1)) ~ 1 + 1/2 beta_(i+1) = 2 - [1 - 1/2 beta_(i+1)]) ~ 2 - sqrt(1 - beta_(i+1))$，$beta_(i+1)^2 -> 0$，因此此时逆向扩散采样和 DDPM 的 Ancestral 采样等价。
 
 
-==== 预测-校正方法
 ==== 概率流 ODE
+
+#tab 最后介绍本文提出的一个逆向 SDE 采样的另一种方法。对任意扩散过程，存在一个确定的 ODE，它描述轨道和扩散过程中随时间变化的边缘分布 $p_t (bx)$ 相同：
+$
+  dd bx = [bf(bx, t) + 1/2 g(t)^2 nabla_bx log p_t (bx)] dd t.
+$<eq:neuralODE>
+作者将其称为概率流 ODE，其推导和一般形式的推导见#ref(<appendix:preb-ode>)，#ref(<fig:overview-sdeode>)给出了一个统合的视角。考虑预测 $nabla log p(bx)$ 的分数模型，它也可视作是 #highlight[Neural ODE] 的一个例子。
+
+#figure(
+  image("image-8.png"),
+  caption: [综观： 正向 SDE、逆向 SDE 个概率流 ODE],
+  placement: top
+)<fig:overview-sdeode>
+
+在训练好分数模型 $bold(s)_(bold(theta))$ 后，将其替换掉#ref(<eq:neuralODE>)中的 $nabla log p(bx)$ 一项，得到
+$
+  dd bx = [bf(bx, t) + 1/2 g(t)^2 bold(s)_(bold(theta))(bx, t)] dd t = tilde(bf)_bold(theta)(bx, t) dd t.
+$
+我们可以依照下式得到 $p_0(bx)$：
+$
+  log p_0 (bx_0) = log p_T (bx_T) + int_0^T"div"[tilde(bf)_bold(theta)(bx, t)] dd t.
+$
+而散度项可以由 $EE_(p(bold(epsilon)))[bold(epsilon)^top nabla^2 tilde(bf)_bold(theta)(bx, t) bold(epsilon)]$ 估计，其中 $nabla^2$ 表示 $tilde(bold(f))$ 的第一项的 Jacobian 矩阵，$bold(epsilon)$ 服从标准多维正态分布 $cal(N)(bold(0), bold(I))$。采样时，我们从 $bx_T$ 出发，然后使用数值方法解上述 ODE，得到对应的 $bx_0$。
+
+该方法的另一个优势是我们可以利用 #highlight[NeuralODE] 的一些技巧处理数据。例如我们可以输入图像 $bx_0$ 然后让其沿着概率流 ODE 得到其在隐空间中的表示 $bx_T$。我们能在隐空间做的事情就很多了，例如#highlight[图像编辑、插值、温度缩放]等等。此外，在理想条件下，由于前向 SDE 没有可训练的参数，该框架还可以达到输入数据在隐空间中的表示由输入数据本身唯一确定。
+
+利用这一优势并搭配更好的神经网络模型和 sub-VP SDE，我们可以得到相比于经典算法（如 DDPM）更好的结果。
+
+=== 预测-校正算法
+
+#tab 本节介绍作者提出的综合求解的新方法，由于上述的一般解法和概率ODE同属于数值解法，而本节中的预测-校正算法将上述的各种数值解法统合在一个框架中，故本节位置与原文不同，我将其单列出来，以便于读者分辨不同模块的功能。
+
+生成模型中的SDE和传统的SDE不同，生成模型的SDE中有新的信息 $bold(s)_bold(theta)$，这使得我们可以借助一些 Markov 链 Monte Carlo（MCMC）的方法。具体而言，每次执行上一节中的一般求解器迭代预测之后，可以利用所学到的分数模型的预测结果对其进行校正，这就是所谓的*预测-校正算法*。DDPM和SMLD的采样算法都可以视作预测-校正算法的特殊情形：前者的预测项为恒等映射，校正项为 Langevin MCMC 采样；后者的预测项为祖先采样，校正项为恒等映射。抽象地讲，预测项可以是任意求解逆向 SDE 的数值算法，校正项可以是任意基于分数的 MCMC 算法。整个预测-校正算法的轮廓如#ref(<alg:predict-correct>)所示。在不同架构下的测试结果如#ref(<tab:predict-correct>)所示。可见预测-校正算法拥有更好的FID分数。
+
+#show: style-algorithm
+#algorithm-figure(
+    "Predictor-Corrector Algorithm",
+    vstroke: .5pt + luma(200),
+    {
+      import algorithmic: *
+      Procedure("Predictor-Corrector", none,
+        [Some preparations],
+        For([$i = N-1$ to $0$],
+          [$bx_i <-$ Predictor$(bx_(i+1))$],
+          For([$j = 1$ to $M$], [$bx_i <-$ Corretor$(bx_i)$])
+        ),
+        Return([$bx_0$])
+      )
+    }
+)<alg:predict-correct>
+
+#figure(
+  table(
+    stroke: none,
+    image("image-7.png"),
+  ),
+  caption: [预测-校正算法 (PC) 和仅预测 (P)、仅校正算法 (C) 的性能比较]
+)<tab:predict-correct>
+
+
 === 可控生成
 === 实验结果和讨论
-=== 依然存在的疑惑
-
-- Variance Exploding SDE 和 Variance Preserving SDE 以及 sub-VP SDE 为什么叫这些名字，换言之，如何证明它们分别是 variance exploding 和 variance preserving 的？
-- 概率流 ODE 是否只是一个求解逆向 SDE 的方法？它和文中提出的 SDE 求解方法之间有什么不同？
 
 #pagebreak()
 
-== Stochastic dynamics of the resistively shunted superconducting tunnel junction system under the impact of thermal fluctuations #cite(<DBLP:paper-mean_flow>)
-
-Shenglan Yuan | 10.1016/j.chaos.2025.116917
 
 
 // == Sliced Score Matching: A Scalable Approach to Density and Score Estimation #cite(<DBLP:paper-yang_song-sliced_score_matching>)
@@ -260,85 +331,82 @@ Shenglan Yuan | 10.1016/j.chaos.2025.116917
 // - Maurice Weiler and Gabriele Cesa
 // - https://arxiv.org/abs/1911.08251
 
-
-#pagebreak()
-
-= 学习进度
+// = 学习进度
 // == 机器学习理论
 // === Markov Chain Monte Carlo (MCMC)
 
 
-== 随机过程
+// == 随机过程
 
-#h(2em)本周继续系统学习 Markov 链。
+// #h(2em)本周继续系统学习 Markov 链。
 
-#pagebreak()
+// #pagebreak()
 
-== 随机微分方程
-=== #ito 链式法则和乘积法则的多维情形
+// == 随机微分方程
+// === #ito 链式法则和乘积法则的多维情形
 
-=== 典型的随机微分方程
-==== 股市模型
+// === 典型的随机微分方程
+// ==== 股市模型
 
-==== Brown 桥
+// ==== Brown 桥
 
-==== Langevin 方程
+// ==== Langevin 方程
 
-==== Ornstein–Uhlenbeck (OU) 过程
+// ==== Ornstein–Uhlenbeck (OU) 过程
 
-==== 随机谐振子
-
-
-
-=== 解的存在性和唯一性
-
-=== 随机微分方程的数值模拟
-
-#tab 考虑一个自守的 SDE 
-$
-  dd X = F(X) dd t + G(X) dd bold(W)
-$
-下面给出模拟它的三种方法。
-
-==== Euler-Maruyama 法
-
-Euler-Maruyama 法主要思想是 Brown 运动 $W(dot)$ 的增量独立性，即 $W(t + Delta t) - W(t) ~ cal(N)(0, 1)$，因此有
-$
-  X(t + Delta t) approx X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z
-$
-其中 $Z ~ cal(N)(0, 1)$
-
-==== Milstein 法
-
-Milstein 法相比于 Euler-Maruyama 法更细，来源于对 $display(int_t^(t+Delta t) G(X)dd W)$ 更精确的估计。其形式为
-$
-  X(t + Delta t) approx& X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z \ &+ 1/2 G(X) partial/(partial X)G(X)[Z^2t - (Delta t)^2]
-$
-
-其推导我还需要再看一下。
-
-==== 随机 Runge-Kutta 法
-
-
-#pagebreak()
-
-== 量子力学初步
-
-
-#pagebreak()
-
-== Josephson 结
-
-
-#pagebreak()
-
-= 问题解决记录
-== Typst 相关
-=== 自定义图表标题位置和内容
+// ==== 随机谐振子
 
 
 
-#pagebreak()
+// === 解的存在性和唯一性
+
+// === 随机微分方程的数值模拟
+
+// #tab 考虑一个自守的 SDE 
+// $
+//   dd X = F(X) dd t + G(X) dd bold(W)
+// $
+// 下面给出模拟它的三种方法。
+
+// ==== Euler-Maruyama 法
+
+// Euler-Maruyama 法主要思想是 Brown 运动 $W(dot)$ 的增量独立性，即 $W(t + Delta t) - W(t) ~ cal(N)(0, 1)$，因此有
+// $
+//   X(t + Delta t) approx X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z
+// $
+// 其中 $Z ~ cal(N)(0, 1)$
+
+// ==== Milstein 法
+
+// Milstein 法相比于 Euler-Maruyama 法更细，来源于对 $display(int_t^(t+Delta t) G(X)dd W)$ 更精确的估计。其形式为
+// $
+//   X(t + Delta t) approx& X(t) + F(X) Delta t + sqrt(Delta t) dot G(X) Z \ &+ 1/2 G(X) partial/(partial X)G(X)[Z^2t - (Delta t)^2]
+// $
+
+// 其推导我还需要再看一下。
+
+// ==== 随机 Runge-Kutta 法
+
+
+// #pagebreak()
+
+// == 量子力学初步
+
+
+// #pagebreak()
+
+// == Josephson 结
+
+
+// #pagebreak()
+
+// = 问题解决记录
+// == Typst 相关
+// === 自定义图表标题位置和内容
+
+
+
+// #pagebreak()
 
 = 下周计划
 *论文阅读*
@@ -479,6 +547,7 @@ $
     + (1 - sigma_(t-1)^2/(sigma_(t)^2)) bx_0, ((sigma_t^2 - sigma_(t-1)^2)sigma_(t-1)^2)/sigma_t^2) \
 $
 
+== 概率流 ODE 推导<appendix:preb-ode>
 
 
 
