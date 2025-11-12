@@ -308,11 +308,14 @@ $
 
 #pagebreak()
 
+#set text(lang: "en")
 #bibliography("ref.bib",   // 你的 BibTeX 文件
               title: "参考文献",
               style: "ieee", 
               full: true
 )
+
+#set text(lang: "zh")
 
 #pagebreak()
 
