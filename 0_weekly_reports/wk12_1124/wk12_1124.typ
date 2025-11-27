@@ -110,90 +110,45 @@
 
 = 项目进展
 == 使用神经网络学习生命游戏的演化动力学
+=== 训练数据可视化和裁剪
 
-#h(2em) 目前的实现尚未考虑改变等变约束，实现的是其他所有模块的功能。其大致是算法结构如下
+#h(2em) 本周实现了可视化训练得到轨道的图形化界面程序。发现对于部分规则（例如 `B3678/S34678`）容易演化至平凡的不动点，因此可以控制在生成轨道的过程中，如果发现系统落入一阶不动点，那么就终止模拟。这样做可以提高得到数据集的质量，然而这样操作会使得数据集读取过程变得稍复杂。
 
-```python
-# read and process the command line arguments  
-# initialize dataset and dataloader with only one visible trajectory. 
-# initialize RuleSimulator
-# initialize predictor model.
+=== 优化规则提取器
+==== 遍历输入特征的映射方法
 
-# while prediction loss and simulation loss is not converged
-for round_id in range(1, 21):
-    # train predictor on visible trajectories.
-    # update rules in RuleSimulator from predictor.
-    #randomly select one of the invisible trajectories to simulate.
-    #evaluate predictor on one of the visible trajectories.
-    # calculate simulation acc.
 
-    if sim_acc > 0.99 and train_loss < 0.01 and evaluate_acc > 0.95:
-        # break
-    else:
-        # randomly add one trajectory 
-# save predictor model.
-# save rules.
-```
+==== 统计存活邻居细胞数量的方法（黑盒方法）
 
+#h(2em) 一个暂行的方法是做下面和经典的生命游戏完全相同的假定：一是下一状态只依赖于这个细胞本身和它周边的八个细胞，二是细胞周边的八个邻居细胞对细胞下一状态的权重相同。这样我们可以用神经网络作为演化器，对若干随机输入批量演化下一状态（随机的输入可以是形状为 `[N, 1, w, h]` 的张量），然后统计状态转移 $(bx_(t), cal(N)(bx_t)) -> bx_(t+1)$。这会得到一系列的直方图。此时可以使用例如 FixMatch 这样的半监督的方法，对于高置信度的转移规则，将其确定为神经网络所学到的系统演化规则。
+
+==== 从神经网络权重出发的方法（白盒方法）
+
+#h(2em) 从神经网络权重出发的主要思路为将一个复杂规则，例如 `B3678/S34678` 提取得到一系列的子规则，类似于空间的基。假设我们得到了可以构建所有规则的一个“基规则集”，并在该集合中的每条规则上训练一个和耦合规则一样结构的神经网络，对比训练完成后网络的权重，我们期望参与构成耦合规则的基规则网络的权重能在耦合规则网络的权重中有所体现。检查的方法目前想到的有两个。一是定性的，直接对权重进行可视化，然后比较可视化所见权重：基规则中权重模式是否出现在耦合规则网络的权重中；二是定量的，构造参数空间中的某种内积，然后做内积，得到耦合网络权重在各基规则网络权重方向的“分量”。也许后者可以通过类似度量学习一样，学习一个内积网络出来。
+
+目前该规则中拆分或得到基规则是个难题。如果直接按照naive的想法，切成 `B1/S`, ..., `B8/S`, `B/S1`, ..., `B/S8`，模拟生成时对于大部分的规则，将极其容易跌至平凡不动点，可用于训练的数据极少。
 
 #pagebreak()
 = 文献阅读
 
-== Stable Neural SDE in Analyzing Irregular Time Series Data #ref(<Arxiv:paper-StableNeuralSDE>)
 
-*#link("https://arxiv.org/abs/2402.14989v6")[ICLR 2024] | YongKyung Oh et al.*
+== Diffusion Schrödinger Bridge with Applications to Score-Based Generative Modeling
 
-本论文讨论了提出了一些保证解的唯一性、随机稳定性和数值稳定性的 Neural SDE 模式。
+*#link("http://arxiv.org/abs/2106.01357")[NIPS 2021] | Valentin De Bortoli et al.*
 
-=== Neural ODE 和 Neural SDE 简介
+#pagebreak()
 
-#tab Neural ODE 将神经网络作为导数 $display((dd f)/(dd x))$ 的预测器。令 $h(x; theta_h)$ 将数据点投影至隐空间（对应地还得有一个 decoder），得到隐空间中的表示 $z$，隐空间中的 ODE $dd z = f(t, z(t); theta_f) dd t$ 的解就可以写为
-$
-  z(t) = z(0) + int_0^t f(tau, z(tau); theta_f) dd tau, #h(2em) z(0) = h(x; theta_h)
-$
-其中 $f$ 和 $h$ 都是神经网络。Neural CDE (neural controlled differential equation) 添加了一个控制信号 $X$，它常常是数据点的插值曲线。Neural CDE 将 Neural ODE 中的积分改为 Riemann-Stieltjes 积分：
-$
-  z(t) = z(0) + int_0^t f(tau, z(tau); theta_f) dd X(tau), #h(2em) z(0) = h(x; theta_h)
-$
-Neural SDE 的思想也很类似，它将偏移项 $f$ 和扩散项 $g$ 都由神经网络代替，其求解形式为
-$
-  z(t) = z(0) + int_0^t f (tau, z(tau); theta_f) dd tau + int_0^t g (tau, z(tau); theta_s) dd W(tau), #h(2em) z(0) = h(x; theta_h)
-$
-其中 $W(t)$ 是和 $z$ 维数相同的 Brown 运动。我们也可以仿照 Neural CDE 的形式，为 Neural SDE 引入一条控制轨道。令
-$
-  macron(z)(t) = zeta (t, z(t), X(t); theta_zeta)
-$
-然后将 $  z(t)$ 替换为 $macron(z)(t)$。
+== Score-based generative modeling through SDE #cite(<DBLP:paper-yang_song-score_based_generative_modeling_sde>)
 
-有了上述的积分形式，*Neural ODE 和 SDE 的求解可以交由数值算法完成。神经网络参与进来的点是估计偏移项和扩散项（若有），训练好的神经网络可以参与数值计算过程，当做原本的偏移项函数和扩散项函数来用。*引入随机项使得 Neural SDE 面临三大难题，分别是解的存在*唯一性、随机稳定性和数值稳定性*。如果某形式的 SDE 缺乏唯一强解，同一初值可能经过计算进入完全不同的轨道，使得训练变得困难。引入的随机项会使得得到的轨道不平稳，可能导致训练过程中的梯度爆炸。另外，随机项的引入会使得数值计算中的稳定性更加重要，需要设置更加数值稳定的 SDE 形式。
+*#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
 
-=== 良好性质的 Neural SDE 结构
+==== 逆向 SDE 的推导
 
-作者提出了三个 Neural SDE 结构，分别是 *Langevin 型 SDE*、*线性噪声 SDE* 和 *几何 SDE*。其形式分别如下
-$
-  dd z(t) &= gamma (z(t); theta_gamma ) dd t + sigma (t ; theta_sigma ) dd W(t) #h(2em)  & "Langevin 型 SDE (LSDE)" \
-  dd z(t) &= gamma (t, z(t); theta_gamma ) dd t + sigma (t ; theta_sigma ) z(t) dd W(t) #h(2em)  & "线性噪声 SDE (LNSDE)" \
-  (dd z(t))/(z(t)) &= gamma (t, z(t); theta_gamma ) dd t + sigma (t ; theta_sigma ) dd W(t) #h(2em)  & "几何 SDE (GSDE)"
-$
-这三种 Neural SDE 结构理论上可以解决先前提到的三个问题，并在实验中表现良好。
+==== 概率流 ODE 的推导 
 
-// #pagebreak()
+#pagebreak()
 
-// == Score-based generative modeling through SDE #cite(<DBLP:paper-yang_song-score_based_generative_modeling_sde>)
-
-// *#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
-
-// ==== 逆向 SDE 的推导
-
-// ==== 概率流 ODE 的推导 
-
-// #pagebreak()
-
-
-// == Diffusion Schrödinger Bridge with Applications to Score-Based Generative Modeling
-
-// *#link("http://arxiv.org/abs/2106.01357")[NIPS 2021] | Valentin De Bortoli et al.*
-
+== Scalable Diffusion Models with Transformers
 
 #pagebreak()
 
