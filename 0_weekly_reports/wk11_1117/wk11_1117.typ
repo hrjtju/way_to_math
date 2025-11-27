@@ -92,7 +92,7 @@
 #set math.cases(gap: 0.5em)
 
 // metadata
-#let wk_report_name = "2025年11月10日至11月16日周报"
+#let wk_report_name = "2025年11月17日至11月23日周报"
 #let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
 
 #set page(
@@ -111,121 +111,150 @@
 = 项目进展
 == 使用神经网络学习生命游戏的演化动力学
 
-#tab 综合上周提出的总框架图（#ref(<fig:life_framework>)），本周开始逐个考虑并使用代码实现其中的各关键部分。
+#h(2em) 目前的实现尚未考虑改变等变约束，实现的是其他所有模块的功能。其大致是算法结构如下
 
-#figure(
-  image("framework.png"),
-  caption: [方法框架总览]
-)<fig:life_framework>
-
-== 数据供应代理
-
-#tab 可以用现成数据集代替，但修改可见的演化轨道条数。在初始化时，令可见演化轨道条数为 $1$，每执行完毕一个主动学习循环，且需要继续循环时，可见演化轨道条数 $+1$，从而已收集好的新的一条轨道可以加入训练数据中。另外，还可以考虑将新的轨道赋予更大的权重，可以在 `__getitem__` 方法中添加一个输出，表示其权重，相应地将维护一个可见轨道条数改为维护一个可见轨道的有序列表，依据列表中轨道的先后赋予依次从低到高的权重。
-
-== 等变神经网络模块
-
-#tab 神经网络训练模块有现成的代码，但是需要解决框架图中的施加等变约束的部分。注意刚开始的时候是只有平移不变性的，然后再加上其他的群等变约束，这意味着如果采用群等变卷积网络（`e2cnn`）包的话需要仔细研究其源码实现。一个暂行的替代方案是用普通的 CNN，然后加上不变性损失。例如对于晶体群 $p 4$，可以令 $3 times 3$ 卷积核的上下左右和四个对角的值分别相等，可以采取强制相等，或者旋转损失的方式添加等变性约束。另外同时可以研究 `e2cnn` 的底层实现，来研究如何在不断扩充等变群元时最大程度保留上一次训练好的网络权重，避免需要再人为蒸馏一遍。
-
-== 指示数据集、规则提取器和生成器
-
-#tab 先说指示数据集。虽然它生成起来非常简单：
 ```python
-w, h = 3, 3
-ls = [[0, 1] for _ in range(w*h)]
-indicator_dataset = None
-for idx, i in enumerate(product(*ls)):
-    arr = torch.tensor(list(i)).reshape(1, 3, 3)
-    if indicator_dataset is None:
-        indicator_dataset = arr
-    else:
-        indicator_dataset = torch.concatenate([indicator_dataset, arr])
-```
-但在 `w` 和 `h` 变大时，如果要遍历所有的 $0$-$1$ 组合，其组合数将指数级增长（$2^(w h)$），带给生成和验证过程以很大的困难。另外，拿到指示数据集 `indicator_dataset` 和对应的网络预测值后，需要思考的是如何将其转化为确定性规则的问题。
+# read and process the command line arguments  
+# initialize dataset and dataloader with only one visible trajectory. 
+# initialize RuleSimulator
+# initialize predictor model.
 
-在先前的想法中是选取网络的预测置信度高的转变对 $(x_t, N(x_t)) -> x_(t+1)$，但需要考虑两个问题，一是 `pyseagull` 的模拟器中是通过卷积来实现规则的，我们需要想办法将得到的转变对转化成卷积核的形式。换言之，我们需要将得到的这一堆转变对转换为显式的规则形式，我目前还没有什么好的想法。
+# while prediction loss and simulation loss is not converged
+for round_id in range(1, 21):
+    # train predictor on visible trajectories.
+    # update rules in RuleSimulator from predictor.
+    #randomly select one of the invisible trajectories to simulate.
+    #evaluate predictor on one of the visible trajectories.
+    # calculate simulation acc.
+
+    if sim_acc > 0.99 and train_loss < 0.01 and evaluate_acc > 0.95:
+        # break
+    else:
+        # randomly add one trajectory 
+# save predictor model.
+# save rules.
+```
+
 
 #pagebreak()
 = 文献阅读
-== [续] Score-based generative modeling through SDE #cite(<DBLP:paper-yang_song-score_based_generative_modeling_sde>)
 
-*#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
+== Stable Neural SDE in Analyzing Irregular Time Series Data #ref(<Arxiv:paper-StableNeuralSDE>)
 
-// === 补遗
+*#link("https://arxiv.org/abs/2402.14989v6")[ICLR 2024] | YongKyung Oh et al.*
 
+本论文讨论了提出了一些保证解的唯一性、随机稳定性和数值稳定性的 Neural SDE 模式。
 
+=== Neural ODE 和 Neural SDE 简介
+
+#tab Neural ODE 将神经网络作为导数 $display((dd f)/(dd x))$ 的预测器。令 $h(x; theta_h)$ 将数据点投影至隐空间（对应地还得有一个 decoder），得到隐空间中的表示 $z$，隐空间中的 ODE $dd z = f(t, z(t); theta_f) dd t$ 的解就可以写为
+$
+  z(t) = z(0) + int_0^t f(tau, z(tau); theta_f) dd tau, #h(2em) z(0) = h(x; theta_h)
+$
+其中 $f$ 和 $h$ 都是神经网络。Neural CDE (neural controlled differential equation) 添加了一个控制信号 $X$，它常常是数据点的插值曲线。Neural CDE 将 Neural ODE 中的积分改为 Riemann-Stieltjes 积分：
+$
+  z(t) = z(0) + int_0^t f(tau, z(tau); theta_f) dd X(tau), #h(2em) z(0) = h(x; theta_h)
+$
+Neural SDE 的思想也很类似，它将偏移项 $f$ 和扩散项 $g$ 都由神经网络代替，其求解形式为
+$
+  z(t) = z(0) + int_0^t f (tau, z(tau); theta_f) dd tau + int_0^t g (tau, z(tau); theta_s) dd W(tau), #h(2em) z(0) = h(x; theta_h)
+$
+其中 $W(t)$ 是和 $z$ 维数相同的 Brown 运动。我们也可以仿照 Neural CDE 的形式，为 Neural SDE 引入一条控制轨道。令
+$
+  macron(z)(t) = zeta (t, z(t), X(t); theta_zeta)
+$
+然后将 $  z(t)$ 替换为 $macron(z)(t)$。
+
+有了上述的积分形式，*Neural ODE 和 SDE 的求解可以交由数值算法完成。神经网络参与进来的点是估计偏移项和扩散项（若有），训练好的神经网络可以参与数值计算过程，当做原本的偏移项函数和扩散项函数来用。*引入随机项使得 Neural SDE 面临三大难题，分别是解的存在*唯一性、随机稳定性和数值稳定性*。如果某形式的 SDE 缺乏唯一强解，同一初值可能经过计算进入完全不同的轨道，使得训练变得困难。引入的随机项会使得得到的轨道不平稳，可能导致训练过程中的梯度爆炸。另外，随机项的引入会使得数值计算中的稳定性更加重要，需要设置更加数值稳定的 SDE 形式。
+
+=== 良好性质的 Neural SDE 结构
+
+作者提出了三个 Neural SDE 结构，分别是 *Langevin 型 SDE*、*线性噪声 SDE* 和 *几何 SDE*。其形式分别如下
+$
+  dd z(t) &= gamma (z(t); theta_gamma ) dd t + sigma (t ; theta_sigma ) dd W(t) #h(2em)  & "Langevin 型 SDE (LSDE)" \
+  dd z(t) &= gamma (t, z(t); theta_gamma ) dd t + sigma (t ; theta_sigma ) z(t) dd W(t) #h(2em)  & "线性噪声 SDE (LNSDE)" \
+  (dd z(t))/(z(t)) &= gamma (t, z(t); theta_gamma ) dd t + sigma (t ; theta_sigma ) dd W(t) #h(2em)  & "几何 SDE (GSDE)"
+$
+这三种 Neural SDE 结构理论上可以解决先前提到的三个问题，并在实验中表现良好。
+
+// #pagebreak()
+
+// == Score-based generative modeling through SDE #cite(<DBLP:paper-yang_song-score_based_generative_modeling_sde>)
+
+// *#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
 
 // ==== 逆向 SDE 的推导
 
 // ==== 概率流 ODE 的推导 
 
-
-== Stable Neural Stochastic Differential Equations in Analyzing Irregular Time Series Data
-
-*#link("https://arxiv.org/abs/2402.14989v6")[ICLR 2024] | YongKyung Oh et al.*
+// #pagebreak()
 
 
-== Diffusion Schrödinger Bridge with Applications to Score-Based Generative Modeling
+// == Diffusion Schrödinger Bridge with Applications to Score-Based Generative Modeling
 
-*#link("http://arxiv.org/abs/2106.01357")[NIPS 2021] | Valentin De Bortoli et al.*
+// *#link("http://arxiv.org/abs/2106.01357")[NIPS 2021] | Valentin De Bortoli et al.*
 
 
 #pagebreak()
 
 = 学习进度
-== 机器学习理论
-=== Markov Chain Monte Carlo (MCMC)
+// == 机器学习理论
+// === Markov Chain Monte Carlo (MCMC)
 
 
 == 随机过程
 
-#h(2em)本周继续系统学习 Markov 链。
+#h(2em)本周继续系统学习 Markov 链，了解了常返性的一些性质。特别地，在有限状态的时齐 Markov 链中，相互联通的节点常返性相同。
 
-#pagebreak()
+// #pagebreak()
 
 == 随机微分方程
+#h(2em)本周开始学习 SDE 解的存在性和唯一性。
 
-
-// #pagebreak()
+// // #pagebreak()
 
 == 量子力学
+#h(2em) 了解了量子力学的一些基本概念，例如波函数、薛定谔方程、无限深势阱、算符。
+
+// // #pagebreak()
+
+// == Josephson 结
+
+
+// // #pagebreak()
+
+// == Riemann–Stieltjes 积分
+
+= 问题记录
+== SDE 数值解的问题
+
+#h(2em) 我尝试使用 Python 求解下面的 SDE：
+$
+  
+$
+
 
 
 // #pagebreak()
-
-== Josephson 结
-
-
-// #pagebreak()
-
-== Riemann–Stieltjes 积分
-
-// = 问题解决记录
-// == Typst 相关
-// === 自定义图表标题位置和内容
-
-
-
-#pagebreak()
 
 = 下周计划
 *论文阅读*
 + 生成模型
-  - 薛定谔桥（精读）
-  - Stable Neural Stochastic Differential Equations in Analyzing Irregular Time Series Data（精读）
-  - DDIM（泛读）
+  - 薛定谔桥
+  - DDIM
 // + 几何深度学习
 //   - General $E(2)$ - Equivariant Steerable CNNs
 
 *项目进度*
 + 使用神经网络学习生命游戏的演化动力学
-  - 实现数据供应代理模块和等变神经网络模块
+  - 调试完成代码，并考虑等变约束
 + 耦合约瑟夫森结
   - 将 MATLAB 模拟代码全部迁移至 Python 
   - 考虑简单的 Neural SDE 方法解带参 OU 过程的参数
 
 *理论学习*
 + 随机过程课程
-  - 复习 Poisson 过程
+  - 复习 Poisson 过程和 Markov 过程
 + 随机微分方程
   - 第五章 
 
@@ -245,6 +274,6 @@ for idx, i in enumerate(product(*ls)):
 
 #set text(lang: "zh", font: ("New Computer Modern", "Kai", "KaiTi"))
 
-= 附录
+// = 附录
 
 
