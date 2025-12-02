@@ -18,6 +18,7 @@ dependencies = [
     { name = "numba" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sdeint" },
     { name = "torch", version = "2.7.1+cu118", source = { registry = "https://download.pytorch.org/whl/cu118" }, marker = "sys_platform == 'win32'" },
     { name = "torch", version = "2.9.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
 ]
@@ -26,6 +27,7 @@ dependencies = [
 requires-dist = [
     { name = "numba", specifier = ">=0.62.1" },
     { name = "scipy", specifier = ">=1.15.3" },
+    { name = "sdeint", specifier = ">=0.3.0" },
     { name = "torch", marker = "sys_platform != 'win32'", specifier = ">=2.7.1" },
     { name = "torch", marker = "sys_platform == 'win32'", specifier = ">=2.7.1", index = "https://download.pytorch.org/whl/cu118" },
 ]
@@ -666,6 +668,16 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/61/82/8d0e39f62764cce5ffd5284131e109f07cf8955aef9ab8ed4e3aa5e30539/scipy-1.16.3-cp314-cp314t-win_amd64.whl", hash = "sha256:d9f48cafc7ce94cf9b15c6bffdc443a81a27bf7075cf2dcd5c8b40f85d10c4e7", size = 39471128, upload-time = "2025-10-28T17:38:05.259Z" },
     { url = "https://files.pythonhosted.org/packages/64/47/a494741db7280eae6dc033510c319e34d42dd41b7ac0c7ead39354d1a2b5/scipy-1.16.3-cp314-cp314t-win_arm64.whl", hash = "sha256:21d9d6b197227a12dcbf9633320a4e34c6b0e51c57268df255a0942983bac562", size = 26464127, upload-time = "2025-10-28T17:38:11.34Z" },
 ]
+
+[[package]]
+name = "sdeint"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a0/6f/8b6eecefd4d5fba57f58edba98f0050a5823e5c42db918600f370274012d/sdeint-0.3.0.tar.gz", hash = "sha256:edee046344abc9350518cc4421e0cd983967cae150d382518bfd84e0306ca64a", size = 39961, upload-time = "2022-07-12T07:44:42.18Z" }
 
 [[package]]
 name = "setuptools"
