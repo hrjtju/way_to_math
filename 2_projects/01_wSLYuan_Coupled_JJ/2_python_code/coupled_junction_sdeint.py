@@ -4,7 +4,7 @@ from matplotlib import axes, pyplot as plt
 import numpy as np
 from numba import njit
 
-from sdeint import itoSRI2 
+from sdeint import itoSRI2, itoEuler
 
 # coupled_junction.py
 
@@ -85,50 +85,41 @@ class CoupledJunction:
     def update_history(self, i: int, t: float):
         self.history[:, i] = np.array([t, *self.state.flatten()], dtype=np.float64)
     
-    def simulate_hand(self, tspan: float, dt: float = 1e-4):
+    def simulate(self, tspan: float, dt: float = 1e-4):
         if self.seed is not None:
             np.random.seed(self.seed)
         
         params = self.params
         
-        linear_ode_matrix = np.array([
-            [0, 1, 0, 0],
-            [-params.kappa1, -params.beta1, params.kappa1, 0],
-            [0, 0, 0, 1],
-            [params.kappa2, 0, -params.kappa2, -params.beta2],
-        ], dtype=np.float64)
+        def f(x, t):
         
-        t = 0
-        t_linspace = np.arange(0, tspan, dt)
-        history_steps = len(t_linspace) // 100 + 1
-        print(history_steps)
-        
-        self.history = np.empty((5, history_steps), dtype=np.float64)
-        
-        for i, t in enumerate(t_linspace):
-            if i % 100 == 0:
-                self.update_history(i//100, t)
-            
-            diffusion_term = np.array([[0], 
-                                       [params.sigma1*np.random.normal(0, 1)], 
-                                       [0], 
-                                       [params.sigma2*np.random.normal(0, 1)]], dtype=np.float64) * np.sqrt(dt)
+            linear_ode_matrix = np.array([
+                [0, 1, 0, 0],
+                [-params.kappa1, -params.beta1, params.kappa1, 0],
+                [0, 0, 0, 1],
+                [params.kappa2, 0, -params.kappa2, -params.beta2],
+            ], dtype=np.float64)
             
             drift_term = np.array([[0], 
-                                   [-np.sin(self.state[0, 0]) + params.i1], 
+                                   [-np.sin(x[0]) + params.i1], 
                                    [0], 
-                                   [-np.sin(self.state[2, 0]) + params.i2]], dtype=np.float64)
-
-            self.state = core_step(self.state, 
-                                   linear_ode_matrix, 
-                                   drift_term, 
-                                   diffusion_term, dt)
+                                   [-np.sin(x[2]) + params.i2]], dtype=np.float64)
             
-            print("\rProgress: {:.2f}%".format(t / tspan * 100), end="")
+            return (linear_ode_matrix @ x.reshape(-1, 1) + drift_term).reshape(-1)
+        
+        def g(x, t):
+            return np.diag([0, params.sigma1, 0, params.sigma2]).astype(np.float64)
+        
+        self.t = np.linspace(0, int(tspan), int(tspan*1e4))
+        
+        res = itoEuler(f, g, y0=self.state.reshape(-1), tspan=self.t)
+        
+        self.history = res.reshape(4, -1)
             
     def export_simulation(self):
         # print(self.history.shape)
-        t, phi1, v1, phi2, v2 = self.history[:, :-1]
+        phi1, v1, phi2, v2 = self.history[:, ::10]
+        t = self.t[::10]
         
         fig, axs = plt.subplots(2, 3, figsize=(15, 10), dpi=400)
         axs: List[axes.Axes] = axs.flatten()
@@ -194,7 +185,7 @@ if __name__ == "__main__":
     cj = CoupledJunction(params)
     cj.init_state(init_cond)
     # cj.simulate_hand(tspan=100.0, dt=1e-4)
-    cj.simulate_hand(tspan=100.0, dt=1e-6)
+    cj.simulate(tspan=100, dt=1e-6)
     # import cProfile
     # cProfile.run('cj.simulate_hand(tspan=100.0, dt=5e-4)', "stats")
     
