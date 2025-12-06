@@ -24,6 +24,7 @@
 #let bw = $bold(w)$
 #let bW = $bold(W)$
 #let by = $bold(y)$
+#let bY = $bold(Y)$
 #let bz = $bold(z)$
 #let bZ = $bold(Z)$
 #let mtxId = $bold(I)$
@@ -45,19 +46,18 @@
 #let argmin = $op("arg min", limits: #true)$
 #let argmax = $op("arg max", limits: #true)$
 
-
 #let ito = $"It"hat("o")$
 #let schrodinger = "Schrödinger"
 
 // Theorem environments
-#let theorem = thmbox("theorem", "定理", fill: rgb("#eeffee"))
+#let theorem = thmbox("theorem", "定理", fill: rgb("#eeffee"), base_level: 1)
 #let corollary = thmplain(
   "corollary",
   "推论",
   base: "theorem",
   titlefmt: strong
 )
-#let definition = thmbox("definition", "定义", inset: (x: 1.2em, top: 1em))
+#let definition = thmbox("definition", "定义", inset: (x: 1.2em, top: 1em), base_level: 1)
 #let example = thmplain("example", "示例").with(numbering: none)
 #let proof = thmproof("proof", "证明")
 #let redText(t) = {text(red)[$#t$]}
@@ -152,7 +152,7 @@
     table.hline(),
     table.header([记号], [表达式], [意义]),
     table.hline(stroke: 0.5pt),
-    [$cal(C)$], [$C([0, T], RR^d)$], [从 $[0, T]$ 到 $RR^d$ 的连续函数全体],
+    [$cal(C)$], [$scr(C)([0, T], RR^d)$], [从 $[0, T]$ 到 $RR^d$ 的连续函数全体],
     [$cal(B)(cal(C))$], [$-$], [$cal(C)$ 上的所有 Borel 集],
     [$scr(P)(mono(E))$], [$-$], [可测空间 $mono(E)$ 上的概率测度的全体],
     [$scr(P)_ell$], [$scr(P)((RR^d)^ell)$], [---#v(1em)],
@@ -177,11 +177,104 @@ $
 
 $
 display(p(x_(0:N)) = p_N (x_N) prod_(k=0)^(N-1)) p_(k|k+1)(x_(k)|x_(k+1))
+$<reversed-time-mc>
+
+我们希望 $p_N$ 逼近先验分布 $p_"prior"$，从而可以从先验分布出发，沿着#ref(<reversed-time-mc>)演化得到未知数据分布 $p_"data"$，这就是 DDPM 中提出的*祖先采样 (Ancestral Sampling)*。一般地，我们假定该 Markov 链的正向转移概率为 $p_(k+1|k)(x_(k+1)|x_k) = cal(N)(x_(k+1); x_k + gamma_(k+1)f(x_k), 2gamma_(k+1)mtxId)$，要得到逆向转移概率 $p_(k|k+1)$，根据 Bayes 公式和一些其他技巧，可以得到
 $
+  & p_(k|k+1)(x_k|x_(k+1)) \ 
+  &= (p_(k+1|k)(x_(k+1)|x_k)p_(k)(x_(k))) / (p_(k+1)(x_(k+1)))   
+  = p_(k+1|k)(x_(k+1)|x_k) dot exp lr([log p_(k)(x_(k)) - log p_(k+1)(x_(k+1))])\  
+  &= p_(k+1|k)(x_(k+1)|x_k) dot exp lr([log p_(redText(k+1))(x_(k)) - log p_(k+1)(x_(k+1))]) #tab p_k approx p_(k+1)\
+  &= p_(k+1|k)(x_(k+1)|x_k) dot exp lr(chevron.l nabla log p_(k+1) (x_(k+1)), x_k - x_(k+1) chevron.r) tab "在 " x_(k+1) "处 Taylor 展开到一阶"\
+  &= C exp lr({- (norm(x_(k+1) - x_k - gamma_(k+1) f(x_k))^2 + 2 chevron.l redText(2 gamma_(k+1) nabla log p_(k+1) (x_(k+1))), x_k - x_(k+1) chevron.r)/(2 dot 2 gamma_(k+1))})\
+  &= C dot C' dot exp lr({- (norm(x_(k+1) - x_k - gamma_(k+1) f(x_k) + redText(2 gamma_(k+1) nabla log p_(k+1) (x_(k+1))))^2)/(2 dot 2 gamma_(k+1))})\  
+  &approx C''exp lr({- (norm(x_(k+1) - x_k - gamma_(k+1) f(redText(x_(k+1))) + 2 gamma_(k+1) nabla log p_(k+1) (x_(k+1)))^2)/(2 dot 2 gamma_(k+1))}) #tab x_k approx x_(k+1)\
+  &= cal(N) (x_k; x_(k+1) - gamma_(k+1)f(x_(k+1)) + nabla log p_(k+1)(x_(k+1)), 2 gamma_(k+1) mtxId))
+$<reverse-mc-transition-prob>
+
+由于 $nabla log p_(k+1)(x_k+1)$ 事先未知，可以用分数匹配的方法训练一个网络 $s_theta (x, k+1)$ 拟合之，具体原因如下：假设条件概率 $p_(k+1|0) (x_(k+1)|x_0)$ 已经给定，那么 $p_(k+1|k)(x_(k+1)|x_k)$ 就可以写为
+
+$
+p_(k+1)(x_(k+1)) = int p_0 (x_0) p_(k+1|0)(x_(k+1)|x_0) dd x_0
+$
+
+可以得到等式左边的对数梯度：
+
+$
+  nabla_(x_(k+1)) log p_(k+1) (x_(k+1)) &= nabla_(x_(k+1)) log int p_0 (x_0) p_(k+1|0)(x_(k+1)|x_0) dd x_0 \  
+  &= display(nabla_(x_(k+1))  int p_0 (x_0) p_(k+1|0)(x_(k+1)|x_0) dd x_0)/display(p_(k+1) (x_(k+1)))\  
+  &= display( int p_0 (x_0) nabla_(x_(k+1)) p_(k+1|0)(x_(k+1)|x_0) dd x_0)/display(p_(k+1) (x_(k+1)))\  
+  &= display( int (p_0 (x_0) p_(k+1|0)(x_(k+1)|x_0))/display(p_(k+1) (x_(k+1))) dot nabla_(x_(k+1)) log p_(k+1|0)(x_(k+1)|x_0) dd x_0)\  
+  &= int p_(0|k+1) (x_0|x_(k+1)) nabla_(x_(k+1)) log p_(k+1|0)(x_(k+1)|x_0) dd x_0) dd x_0 \  
+  &= EE_(p_(0|k+1)) [nabla_(x_(k+1)) log p_(k+1|0)(x_(k+1)|x_0) ]
+$
+
+因此分数网络的学习目标为 $EE_(p_(0|k+1)) [nabla_(x_(k+1)) log p_(k+1|0)(x_(k+1)|x_0) ]$ 这样就自然地得到了下面的分数匹配的优化目标：
+
+$
+  limits("minimize")_theta sum_(k=1)^N EE_(p_(0, k)) lr([norm(
+    s_theta(x_k, k) - nabla_(x_k) log p_(k|0) (x_k|x_0)
+  )^2])
+$
+
+其中 $p_(0, k) = p_0 p_(k|0)$。如果无法计算 $p_(k|0)$，就将上述目标中的 $k|0$ 一项改为 $k|k-1$，和 SMLD 论文中的形式相同。最后，要从先验分布 $p_"prior"$ 生成样本，只需从中采样 $x_N ~ p_"prior"$，然后进行 Langevin 采样。
 
 ==== 连续情形
 
+#tab 考虑将上一节中的离散情形求极限，发现离散情形为遵循下面 SDE 的随机过程 $(bX_t)_(t in [0, T])$ Euler-Maruyama 离散化形式：
+
+$
+  dd bX_t = f(bX_t) dd t + sqrt(2) dd bW, tab bX_0 ~ p_0 = p_"data".
+$
+
+其中 $bW(dot)$ 是和 $bX$ 维数相同的标准 Brown 运动，映射 $f: RR^d -> RR^d$ 为使得强解存在而恰当选取的函数。一般令其为线性函数，即 $f(bx) = -alpha bx$。在此种情况下，其逆向过程 $(bY_t)_(t in [0, T]) = (bX_(T-t))_(t in [0, T])$ 满足下面的逆向 SDE：
+
+$
+  dd bY_t = lr([-f(bY_t) + 2 nabla log p_(T-t) (bY_t)]) dd t + sqrt(2) dd bW_t
+$
+
+读者可以看见，其 Euler-Maruyama 离散化的情形正好对应#ref(<reverse-mc-transition-prob>)。值得注意的是，DDPM 和 SMLD 论文中对应的正向 SDE 都为 Ornstein-Uhlenbeck 过程。下面的定理给出了分数匹配模型应用于逆时 OU 过程预测 $X_0$ 数据分布 $cal(L)(X_0)$ 的误差界：
+
+#theorem[
+  假设存在某个 $M gt.slant 0$，是的对任意 $t in [0, T]$ 和 $x in RR^d$，都有
+  $
+    norm(s_theta (x, t) - nabla log p_t (x)) lt.slant M,
+  $
+  其中 $s_(theta^*) in scr(C) ([0, T] times RR^d, RR^d)$。并假设数据分布 $p_"data" in scr(C)^3 (RR^d, RR_(>0))$ 有界，且满足一些条件#footnote([见论文原文])时，有依照上述方法生成得到的分布 $cal(L)(X_0)$ 和数据分布 $p_"data"$ 之间的全变差范数距离被控制：
+  $
+    norm(cal(L)(X_0) - p_"data")_"TV" lt.slant C(alpha, M, T)
+  $
+  其中 $C(alpha, M ,T)$ 是一个依赖于 $alpha$，$M$ 和 $T$ 的常数。
+]
+
+换言之，该定理给出了这样的叙述：如果我们有一个不甚准确的分数模型 $s_theta$，那么我们依靠它生成得到的分布 $cal(L) (X_0)$ 相比于 $p_"data"$ 可以近到什么程度。该定理还揭示了一个权衡的问题。当 $alpha$ 比较大，即 SDE 中的偏移项较大时，需要更小的数值模拟步长，以及更小的混合总时间 $T$；$alpha$ 较小，即混合速度较慢时，需要更大的混合步长和更长的混合总时间以趋近先验分布 $p_"prior"$。
+
 === #schrodinger 桥
+
+#tab 在生成的语境中，先验分布 $p_"prior"$ 和数据分布 $p_"data"$ 之间的 #schrodinger 桥指的是满足下面条件的路径测度 $pi^star in scr(P)_(N+1)$：
+$
+  pi^star = argmin lr({KL(pi|p): pi in scr(P)_(N+1), pi_0 = p_"data", pi_N = p_"prior"})
+$
+自然地，如果我们得到了 $pi^star$，自然就可以通过它构造出前文中提到的逆向 Markov 链的转移概率 $pi^star_(k|k+1)$。将视角缩小到 #schrodinger 桥的两头，能得到所谓*静态 #schrodinger 桥问题*。给定路径测度 $pi in scr(P)_(N+1)$，$pi_(|0, N)$ 指的是 $X_(1:N-1)$ 的条件分布。对于路径测度 $pi, p in scr(P)_(N+1)$，有下面的恒等关系
+$
+  KL(pi|p) &= int pi(x) log (pi(x))/(p(x)) dd x \ 
+  &= int pi(x) log (pi_(0, N)(x_0, x_N))/(p_(0, N)(x_0, x_N)) dd x
+   + int pi(x) log (pi_(|0, N)(x_(1:N)))/(p_(|0, N)(x_(1:N))) dd x \
+  &= int pi_(|0, N)(x_(1:N)) blueText(int pi_(0, N)(x_0, x_N) log (pi_(0, N)(x_0, x_N))/(p_(0, N)(x_0, x_N)) dd x_(0, N)) dd x_(1:N) 
+   \ & tab + int pi_(0, N)(x_0, x_N) redText(int pi_(|0, N)(x_(1:N)) log (pi_(|0, N)(x_(1:N)))/(p_(|0, N)(x_(1:N))) dd x_(1:N)) dd x_(0, N) \
+  &= EE_(pi_(|0, N))underbrace([KL(pi_(0, N)|p_(0, N))], "常数") + EE_(pi_(0, N))underbrace([KL(pi_(|0, N)|p_(|0, N))], "随机变量")\
+  &= KL(pi_(0, N)|p_(0, N)) + EE_(pi_(0, N))[KL(pi_(|0, N)|p_(|0, N))]
+$
+
+注意，$KL(pi|p)$ 是 #schrodinger 桥定义中的优化目标。根据上面的结果可以拆成两部分，第一部分 $KL(pi_(0, N)|p_(0, N))$ 是边缘分布的匹配项，第二部分 $EE_(pi_(0, N))[KL(pi_(|0, N)|p_(|0, N))]$ 是中间路径的匹配项。匹配两端的边缘分布的版本就是*静态 #schrodinger 桥*，下式给出了该问题的解：
+$
+  pi^("s", star) = argmin lr({KL(pi^"s"|p_(0, N)): pi in scr(P)_(2), pi^"s"_0 = p_"data", pi^"s"_N = p_"prior"})
+$
+得到该解后，完整的 #schrodinger 桥问题的解可以写成
+$
+  pi^star = pi^("s", star) times.o p_(|0, N)
+$
+其中 $p_(|0, N)$ 可以是任给的一个分布，例如可以是高斯转移核 $p_(k+1|k) = cal(N)(x_k, sigma_(k+1)^2)$，这样就得到了 #schrodinger 桥的解：若参考路径测度对应的是标准 Brown 运动，则将上述构造代入上述对 $KL(pi|p)$ 的分解中，第二项路径分布匹配项为 $0$，因此 $pi^star$ 确实是 #schrodinger 桥。
 
 === IPF (Iterative Proportional Fitting) 算法
 
