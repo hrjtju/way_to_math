@@ -38,13 +38,16 @@
 #let qs = $q_(sigma)$
 #let pt = $p_(theta)$
 #let dd = "d"
-#let ito = $"It"hat("o")$
 #let be = $bold(epsilon)$
 #let prod = $product$
 #let int = $integral$
 #let KL = $D_("KL")$
 #let argmin = $op("arg min", limits: #true)$
 #let argmax = $op("arg max", limits: #true)$
+
+
+#let ito = $"It"hat("o")$
+#let schrodinger = "Schrödinger"
 
 // Theorem environments
 #let theorem = thmbox("theorem", "定理", fill: rgb("#eeffee"))
@@ -107,7 +110,13 @@
         + text(12pt)[\ 何瑞杰\ 中山大学, 大湾区大学]
 )
 
-#outline()
+#outline(depth: 2)
+
+#linebreak()
+#grid(columns: (100%), align: center, text(size: 12pt)[速 览])
+
+#tab #lorem(250)
+
 #pagebreak()
 
 = 项目进展
@@ -116,7 +125,7 @@
 = 文献阅读
 
 
-== Score-based Gen. modeling through SDE 补遗
+== Score-based Generative modeling through SDE 补遗
 
 *#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
 
@@ -127,16 +136,52 @@
 #pagebreak()
 
 
-== Diffusion Schrödinger Bridge with App. to Score-Based Gen. Modeling
+== Diffusion Schrödinger Bridge with Application to Score-Based Generative Modeling
 
 *#link("http://arxiv.org/abs/2106.01357")[NIPS 2021] | Valentin De Bortoli et al.*
 
+本文以 #schrodinger 桥 (SB) 的视角构建了一个新的生成模型。本质上是建立从人为规定的先验分布 $p_"prior"$ 到未知数据分布 $p_"data"$ 的最优传输。由于一般形式的 SB 难以求解，本文作者于是退而求其次，考虑迭代求解的 IPF 算法，而最终又将它转化为分数匹配模型可以使用的范畴。除此之外，本文的大部分篇幅和附录给出了有关分数匹配模型的拟合能力以及 SB 和离散情况 IPF 算法的收敛性证明，为模型提供理论保证。除此之外，本文指出该方法相比于扩散模型需要更少的步数。
+
+=== 记号
+
+#align(center,
+  table(
+    columns: 3,
+    align: (center, center, left),
+    stroke: none,
+    table.hline(),
+    table.header([记号], [表达式], [意义]),
+    table.hline(stroke: 0.5pt),
+    [$cal(C)$], [$C([0, T], RR^d)$], [从 $[0, T]$ 到 $RR^d$ 的连续函数全体],
+    [$cal(B)(cal(C))$], [$-$], [$cal(C)$ 上的所有 Borel 集],
+    [$scr(P)(mono(E))$], [$-$], [可测空间 $mono(E)$ 上的概率测度的全体],
+    [$scr(P)_ell$], [$scr(P)((RR^d)^ell)$], [---#v(1em)],
+    [$H(p)$], [$display(-int_(RR^d)) p(x) log p(x) dd x$], [$p$ 的熵#v(1.5em)],
+    [$KL(p|q)$], [$display(int_(RR^d)) p(x) log display(p(x)/q(x)) dd x$], [$p$ 和 $q$ 的 Kullback-Leiber (KL) 散度#v(1.5em)],
+    [$J(mu, nu)$], [$KL(mu|nu) + KL(nu, mu)$], [概率测度 $mu$ 和 $nu$ 的 Jeffrey 散度],
+    [$norm(dot)_"TV"$], [$  $], [全变差范数],
+    [$bb(P)^R$], [$  $], [路径测度 $bb(P)$ 的时间逆],
+    table.hline(),
+  )
+)
 === 去噪扩散模型、分数匹配和逆时 SDE 回顾
 ==== 离散情形
 
+考虑从数据分布 $p_"data"$ 出发的 Markov 链，它的前向转移概率是 $p_(k+1|k), k in {0, 1, ..., N-1}$。于是 ${x_k}_(k=1)^N$ 的联合分布可以写为 
+
+$
+p(x_(0:N)) = p_0 (x_0) prod_(k=0)^(N-1)) p_(k+1|k)(x_(k+1)|x_k)
+$
+
+同样，我们也可以将其表示为反向转移概率是乘积：
+
+$
+display(p(x_(0:N)) = p_N (x_N) prod_(k=0)^(N-1)) p_(k|k+1)(x_(k)|x_(k+1))
+$
+
 ==== 连续情形
 
-=== 薛定谔桥
+=== #schrodinger 桥
 
 === IPF (Iterative Proportional Fitting) 算法
 
@@ -158,6 +203,14 @@
 == 机器学习理论
 === Markov Chain Monte Carlo (MCMC)
 
+
+=== EM 算法 
+
+
+=== 计算学习理论
+
+
+#pagebreak()
 
 == 随机过程
 
@@ -220,6 +273,11 @@
   $
 ]
 
+#figure(
+  image("/assets/image.png", width: 50%), 
+  caption: [Cantor 集的构造]
+)
+
 === 外测度
 
 
@@ -255,22 +313,18 @@
 + 随机微分方程
   - 第五章完成
 
+#pagebreak()
+
+= 附录
 
 
-// #pagebreak()
 
-// #set text(lang: "en")
+#pagebreak()
 
-// #bibliography("refs.bib",   // 你的 BibTeX 文件
-//               title: "参考文献",
-//               style: "ieee", 
-//               full: false
-// )
+#set text(lang: "en")
 
-// #pagebreak()
-
-// #set text(lang: "zh", font: ("New Computer Modern", "Kai", "KaiTi"))
-
-// = 附录
-
-
+#bibliography("refs.bib",   // 你的 BibTeX 文件
+              title: "参考文献",
+              style: "ieee", 
+              full: false
+)
