@@ -42,15 +42,28 @@
 #let be = $bold(epsilon)$
 #let prod = $product$
 #let int = $integral$
+
+#let leq = $lt.slant$
+#let geq = $gt.slant$
+#let tensor = $times.o$
+
+#let cdots = $dots.c$
+
 #let KL = $D_("KL")$
 #let argmin = $op("arg min", limits: #true)$
 #let argmax = $op("arg max", limits: #true)$
+
+#let normal = $cal(N)$
+#let prior = $p_"prior"$
+#let data = $p_"data"$
+#let score = $s_theta$
 
 #let ito = $"It"hat("o")$
 #let schrodinger = "Schrödinger"
 
 // Theorem environments
 #let theorem = thmbox("theorem", "定理", fill: rgb("#eeffee"), base_level: 1)
+#let proposition = thmbox("proposition", "命题", fill: rgb("#e9f6ff"), base_level: 1)
 #let corollary = thmplain(
   "corollary",
   "推论",
@@ -94,6 +107,11 @@
 #set heading(numbering: "1.")
 #set math.cases(gap: 0.5em)
 
+#let pfw(n, k) = {[$p^(#n)_(#k+1|#k) (x_(#k+1)|x_#k)$]}
+#let pbk(n, k) = {[$p^(#n)_(#k|#k+1) (x_#k|x_(#k+1))$]}
+#let qfw(n, k) = {[$q^(#n)_(#k+1|#k) (x_(#k+1)|x_#k)$]}
+#let qbk(n, k) = {[$q^(#n)_(#k|#k+1) (x_#k|x_(#k+1))$]}
+
 // metadata
 #let wk_report_name = "2025年12月1日至12月7日周报"
 #let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
@@ -115,28 +133,67 @@
 #linebreak()
 #grid(columns: (100%), align: center, text(size: 12pt)[速 览])
 
-#tab #lorem(250)
+#tab 本周大部分时间花在了阅读 #schrodinger 桥论文#cite(<debortoli2023diffusionschrodingerbridgeapplications>)，它给出了一个以 #schrodinger 桥问题观察生成模型的视角。一般的薛定谔桥问题（或静态薛定谔桥问题）没有闭式解，作者转而通过修改 IPF 算法使之适配分数匹配生成模型的框架，并采用迭代的方式学习薛定谔桥。
+
+在生命游戏项目方面，本周实现了一个极小的朴素规则提取函数，在 `B3678/S34678` 数据集上可以成功提取规则。
+
+最后本周学习了 Stein 实分析中开篇的少量内容。
 
 #pagebreak()
 
 = 项目进展
 == 使用神经网络学习生命游戏的演化动力学
+
+#tab 本周对训练网络在全部数据集上的统计结果套用上简单的要求从而获取提取的规则序列。具体的说，提取统计中转换频数（如统计得到的 $5$ 个存活邻居下从死亡转换为存活的案例数）超过全体转换频数乘以预测错误率的百分之六十作为“入围”标准，然后再在这个入围标准下分别筛选当前时刻下死亡或存活，并在下一时刻预测存活的频数超过预测为死亡频数的 $10$ 倍的规则作为最终得到的规则。对应的代码片段如下
+
+```python
+# class RuleSimulatorStats
+def infer_rule_str(self, counters, acc) -> Tuple[List, List]:
+    list_str = lambda x:list(map(lambda k:str(int(k)), x))
+
+    dd, dl = sum(counters[0].values()), sum(counters[1].values())
+    ld, ll = sum(counters[2].values()), sum(counters[3].values())
+
+    d_th = (1-acc)*(dd+dl)
+    l_th = (1-acc)*(ld+ll)
+
+    d_all = counters[0] + counters[1]
+    l_all = counters[2] + counters[3]
+
+    filtered_b = sorted(list(filter(lambda x:x[1]>0.6*d_th, d_all.items())), 
+                        key=lambda x:x[0])
+    filtered_s = sorted(list(filter(lambda x:x[1]>0.6*l_th, l_all.items())), 
+                        key=lambda x:x[0])
+
+    born = []
+    survive = []
+
+    for i,_ in filtered_b:
+        if counters[1][i] > 10 * counters[0][i]:
+            born.append(i)
+    for i,_ in filtered_s:
+        if counters[3][i] > 10 * counters[2][i]:
+            survive.append(i)
+    return list_str(born), list_str(survive)
+```
+
+这样朴素的规则提取函数在 `B3678/S34678` 可以成功推出真实的规则。
+
 #pagebreak()
 = 文献阅读
 
+// == Score-based Generative modeling through SDE 补遗
 
-== Score-based Generative modeling through SDE 补遗
+// *#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
 
-*#link("http://arxiv.org/abs/2011.13456")[ICLR 2021] | Yang Song et al. *
-
-=== 概率流 ODE 和 Fokker-Plank 方程
-
+// === 概率流 ODE 和 Fokker-Plank 方程
 
 
-#pagebreak()
+
+// #pagebreak()
 
 
-== Diffusion Schrödinger Bridge with Application to Score-Based Generative Modeling
+== Diffusion Schrödinger Bridge with Application to Score-Based Generative Modeling #cite(<debortoli2023diffusionschrodingerbridgeapplications>)
 
 *#link("http://arxiv.org/abs/2106.01357")[NIPS 2021] | Valentin De Bortoli et al.*
 
@@ -164,6 +221,8 @@
     table.hline(),
   )
 )
+
+
 === 去噪扩散模型、分数匹配和逆时 SDE 回顾
 ==== 离散情形
 
@@ -237,13 +296,17 @@ $
 
 #theorem[
   假设存在某个 $M gt.slant 0$，是的对任意 $t in [0, T]$ 和 $x in RR^d$，都有
+
   $
     norm(s_theta (x, t) - nabla log p_t (x)) lt.slant M,
   $
+
   其中 $s_(theta^*) in scr(C) ([0, T] times RR^d, RR^d)$。并假设数据分布 $p_"data" in scr(C)^3 (RR^d, RR_(>0))$ 有界，且满足一些条件#footnote([见论文原文])时，有依照上述方法生成得到的分布 $cal(L)(X_0)$ 和数据分布 $p_"data"$ 之间的全变差范数距离被控制：
+
   $
     norm(cal(L)(X_0) - p_"data")_"TV" lt.slant C(alpha, M, T)
   $
+
   其中 $C(alpha, M ,T)$ 是一个依赖于 $alpha$，$M$ 和 $T$ 的常数。
 ]
 
@@ -252,10 +315,13 @@ $
 === #schrodinger 桥
 
 #tab 在生成的语境中，先验分布 $p_"prior"$ 和数据分布 $p_"data"$ 之间的 #schrodinger 桥指的是满足下面条件的路径测度 $pi^star in scr(P)_(N+1)$：
+
 $
   pi^star = argmin lr({KL(pi|p): pi in scr(P)_(N+1), pi_0 = p_"data", pi_N = p_"prior"})
 $
+
 自然地，如果我们得到了 $pi^star$，自然就可以通过它构造出前文中提到的逆向 Markov 链的转移概率 $pi^star_(k|k+1)$。将视角缩小到 #schrodinger 桥的两头，能得到所谓*静态 #schrodinger 桥问题*。给定路径测度 $pi in scr(P)_(N+1)$，$pi_(|0, N)$ 指的是 $X_(1:N-1)$ 的条件分布。对于路径测度 $pi, p in scr(P)_(N+1)$，有下面的恒等关系
+
 $
   KL(pi|p) &= int pi(x) log (pi(x))/(p(x)) dd x \ 
   &= int pi(x) log (pi_(0, N)(x_0, x_N))/(p_(0, N)(x_0, x_N)) dd x
@@ -270,51 +336,153 @@ $
 $
   pi^("s", star) = argmin lr({KL(pi^"s"|p_(0, N)): pi in scr(P)_(2), pi^"s"_0 = p_"data", pi^"s"_N = p_"prior"})
 $
+
 得到该解后，完整的 #schrodinger 桥问题的解可以写成
+
 $
   pi^star = pi^("s", star) times.o p_(|0, N)
 $
+
 其中 $p_(|0, N)$ 可以是任给的一个分布，例如可以是高斯转移核 $p_(k+1|k) = cal(N)(x_k, sigma_(k+1)^2)$，这样就得到了 #schrodinger 桥的解：若参考路径测度对应的是标准 Brown 运动，则将上述构造代入上述对 $KL(pi|p)$ 的分解中，第二项路径分布匹配项为 $0$，因此 $pi^star$ 确实是 #schrodinger 桥。
+
+如果恰当的重写静态 #schrodinger 桥定义中的优化目标，我们可以看到它与最优传输的联系：
+
+$
+  KL(pi^"s"|p_(0, N)) &= int pi^"s" (x_(0, N)) log (pi^"s" (x_(0, N)))/(p_(0, N) (x_(0, N))) dd x_(0, N)  \
+  &= int pi^"s" (x_(0, N)) log pi^"s" (x_(0, N)) dd x_(0, N) - int pi^"s" (x_(0, N)) log p_(N|0) (x_(N)|x_0) dd x_(0, N) \ 
+    & tab - int pi^"s" (x_(0, N)) log p_0 (x_0) dd x_(0, N) \ 
+  &= H(pi^"s") - EE_(pi^"s")[log p_(N|0) (x_N|x_0)] + const
+$
+
+因此静态 #schrodinger 桥也可以写成下面带有熵正则化的最优传输问题：
+
+$
+  pi^("s", star) = argmin lr({- EE_(pi^"s")[log p_(N|0) (x_N|x_0)] + H(pi^"s"): 
+    pi in scr(P)_(2), pi^"s"_0 = p_"data", pi^"s"_N = p_"prior"})
+$<static-schrodinger-bridge-1>
+
+若取 $p_(k+1|k)$ 为高斯核，均值为 $0$，方差为 $sigma_k$，则 $p_(N|0)(x_N|x_0) = cal(N) (x_N;x_0, sigma^2)$，其中 $sigma^2 = sum_(k=1)^N sigma_k^2$。因此#ref(<static-schrodinger-bridge-1>)也可以写为
+
+$
+  pi^("s", star) = argmin lr({ EE_(pi^"s")[norm(x_0 - x_N)^2] - 2 sigma^2 H(pi^"s"): 
+    pi in scr(P)_(2), pi^"s"_0 = p_"data", pi^"s"_N = p_"prior"})
+$<static-schrodinger-bridge-2>
 
 === IPF (Iterative Proportional Fitting) 算法
 
-==== IPF 算法的收敛性
+#tab 遗憾的是，大多数非平凡情况下的 SB 都没有闭式解。但我们可以使用 IPF 算法迭代求解。取 $n in NN$，和初始路径测度 $pi^(0) = p$，然后循环执行下面的迭代操作：
 
-==== IPF 的连续情形
+$
+  pi^(2n+1) &= argmin {KL(pi|pi^(2n)): pi in scr(P)_(N+1), pi_N = p_"prior"}\
+  pi^(2n+2) &= argmin {KL(pi|pi^(2n+1)): pi in scr(P)_(N+1), pi_0 = p_"data"}\
+$
 
-=== 实验和讨论
+这相当于将 $pi^0$ 重复地在 KL 散度的意义下分别向限制了一个端点边缘分布的空间中投影。不过这样的形式依然难以计算。作者在引入改进前，首先提到了下面的命题
+
+#proposition[
+  假设 $KL(p_"data" tensor p_"prior"|p_(0, N)) < infinity$，则对任意 $n in NN$，$pi^(2n)$ 和 $pi^(2n+1)$ 分别在 Lebesgue 测度 $p^n$ 和 $q^n$ 下总有正密度，且对任意 $x_(0:N) in cal(X)$，我们有 $p^(0) (x_(0:N)) = p(x_(0:N))$ 以及
+  $
+    q^n (x_(0:N)) = p_"prior" (x_N) prod_(k=0)^(N-1) p^(n)_(k|k+1) (x_k|x_(k+1)) \
+    p^(n+1) (x_(0:N)) = p_"data" (x_0) prod_(k=0)^(N-1) q^(n)_(k+1|k) (x_(k+1)|x_(k)) \
+  $
+]
+
+在实际操作中，我们使用 Bayes 公式相互转化 $p^n_(k|k+1)$ 和 $q^n_(k+1|k)$。我们最初使用加噪过程得到的联合分布 $p$ 作为初始值 $p^0$。在第 $2n$ 步时，有 $pi^(2n) = p^n$。从 $p^n$ 得到的逆向过程 $p^n_(k|k+1)$ 结合上数据分布 $p_"data"$ 就得到了逆向过程 $pi^(2n+1) = q^n$。最后 $q^n$ 对应的正向过程 $q^n_(k+1|k)$ 又定义了新的 $pi^(2n+2)=p^(n+1)$。根据前文对逆向过程分布的推导，我们可以得到前向转移分布 $p^n_(k+1|k) (x_(k+1)|x_k) = normal (x_(k+1); x_k + gamma_(k+1)f_k^n (x_k), 2 gamma_(k+1) mtxId))$ 对应的逆向转移分布 
+$pbk(n,k) approx normal (x_k; x_(k+1) + gamma_(k+1) b_(k+1)^n (x_(k+1), 2 gamma_(k+1) mtxId)
+$
+其中 $b_(k+1)^n (x_(k+1)) = - f^b_k (x_(k+1)) + 2 nabla log p_(k+1)^n (x_(k+1))$。我们还可以用同样的方法估计 $pfw(n+1,k)$ 为 
+$
+  pfw(n+1,k) &approx normal (x_(k+1); x_k + gamma_(k+1)f_k^(n+1) (x_k), 2 gamma_(k+1) mtxId) \
+  &= normal (x_(k+1); x_k + gamma_(k+1) [-b_(k+1)^n (x_k) + 2 nabla log q_k^n (x_k) ] , 2 gamma_(k+1) mtxId)
+$
+
+于是可以得到 $f_k^(n+1) (x_k) = f_k^n (x_k) - 2 nabla log p_(k+1)^n (x_k) + 2 nabla log q_k^n (x_k)$，我们可以通过训练分数网络达到估计 $f_k^(n+1)$ 和 $b_k^(n+1)$ 的目的。下面的命题给出了对这二者迭代估计的可行性。
+
+#proposition[
+  假设任意 $n in NN$, $k in {0, ..., N-1}$ 都有 
+  $
+  qbk(n, k) = normal (x_k; B_(k+1)^n (x_(k+1)), 2 gamma_(k+1) mtxId) \
+  pfw(n,k) = normal (x_(k+1); F_k^n (x_k), 2 gamma_(k+1) mtxId)
+  $
+  其中 $B_(k+1)^n (x) = x + gamma_(k+1) b_(k+1)^n (x)$，$F_k^n (x) = x + gamma_(k+1) f_k^n (x)$；则对任意满足前述条件的 $n, k$，都有 
+  $
+    B_(k+1)^n &= argmin_(B in L^2 (RR^d, RR^d)) EE_(p^n_(k,k+1)) lr([norm(B(X_(k+1)) - [X_(k+1) + F_k^n (X_k) - F_k^n (X_(k+1))])^2])\
+    F_(k)^(n+1) &= argmin_(B in L^2 (RR^d, RR^d)) EE_(p^n_(k,k+1)) lr([norm(F(X_(k)) - [X_(k+1) + B_(k+1)^n (X_(k+1)) - B_(k+1)^n (X_k)])^2])\
+  $
+]
+
+我们可以分别用两个神经网络来学习 $B_k^n$ 和 $F_k^n$，然后迭代执行上面的两个优化步骤至收敛，就得到了切实可行的 #schrodinger 桥生成模型。
+
+#figure(
+  image("/assets/image-1.png", width: 40%)
+)
+
+文章在引入可行的 IPF 迭代算法后接着讨论了这个离散情形迭代算法的收敛性。文中指出在一定的前提下，迭代得到的路径测度序列 $(pi^n)_(n in NN)$ 是良定的、相邻之间的 KL 散度递减，其边缘分布与 $data$ 和 $prior$ 之间的 KL 散度之和为 $display(o(1"/"n))$。接着作者指出在同一假设条件下 SB 问题解的存在性和 IPF 算法的收敛性。文章最后考虑了连续情形的 IPF 算法并指出离散 IPF 为连续 IPF 之离散化这一关系。
+
+=== 实验
+==== Gauss 分布之间的 #schrodinger 桥
+
+#tab 取 $prior = normal (-alpha, mtxId), data = normal (alpha, mtxId)$，其中 $alpha = 0.1 times bold(1)$。这个问题的存在解析形式的静态 SB。取数据维数为 $d = 5, 50$，并在其上训练 DSB，结果如下。小网络 (small) 可以在低维数据的情况下求得正确结果，但在高维情况下需要增加网络大小和训练轮数。
+
+#figure(
+  image("/assets/image-2.png", width: 70%),
+  caption: [DSB 模型在高斯分布实验上收敛]
+)
+
+==== 二维分布
+
+#figure(
+  image("/assets/image-3.png", width: 50%), 
+  caption: [DSB 模型二维数据集上的训练结果]
+)
+
+==== 图像生成
+#figure(
+  grid(columns: 1, image("/assets/image-4.png", width: 90%), image("/assets/image-6.png", width: 90%)), 
+  caption: [DSB 模型二维数据集上的训练结果]
+)
+
+==== 数据插值
+#figure(
+  image("/assets/image-7.png", width: 70%), 
+  caption: [DSB 模型二维数据集上的训练结果]
+)
+
+=== 讨论
+
+#tab 本文首次将 #schrodinger 桥引入生成模型中，相比其他生成模型，SDB 可以以更少的步数达到较好的效果。此外，DSB 的解也是一个扩散过程，这意味着可以套用 Song 等人#cite(<DBLP:paper-yang_song-score_based_generative_modeling_sde>)文章中的 ODE 解法来实现更快地采样生成。尽管如此，如果将 DSB 的迭代轮数 $N$ 降得太低，则可能因 $p_N$ 与 $prior$ 不再接近导致生成效果变差。本文在理论推导上进行了很多探索，保证了分数模型用于生成的可行性，以及使用 IPF 迭代算法的收敛性。此外，DSB 还可以用于多边缘分布约束的 #schrodinger 桥问题、计算 Wasserstein barycenter、求解熵正则化的 Gromov-Wasserstein 问题的最小值解以及求解连续状态空间中的域适应问题。
 
 
 #pagebreak()
 
 
-== Scalable Diffusion Models with Transformers
+// == Scalable Diffusion Models with Transformers
 
-#pagebreak()
+// #pagebreak()
 
 = 学习进度
-== 机器学习理论
-=== Markov Chain Monte Carlo (MCMC)
+// == 机器学习理论
+// === Markov Chain Monte Carlo (MCMC)
 
 
-=== EM 算法 
+// === EM 算法 
 
 
-=== 计算学习理论
+// === 计算学习理论
 
 
-#pagebreak()
+// #pagebreak()
 
-== 随机过程
+// == 随机过程
 
-#h(2em)本周学习了连续状态的 Markov 链。
+// #h(2em)本周学习了连续状态的 Markov 链。
 
-#pagebreak()
+// #pagebreak()
 
-== 随机微分方程
-#h(2em)本周开始学习 SDE 解的存在性和唯一性。
+// == 随机微分方程
+// #h(2em)本周开始学习 SDE 解的存在性和唯一性。
 
-#pagebreak()
+// #pagebreak()
 
 == 实分析
 === 动机
@@ -371,20 +539,22 @@ $
   caption: [Cantor 集的构造]
 )
 
-=== 外测度
+它有一些有趣的性质，例如它的“长度”为零，但它却是不可数集。
+
+// === 外测度
 
 
 #pagebreak() 
 
-== 动力系统基础
-#h(2em)
+// == 动力系统基础
+// #h(2em)
 
-#pagebreak()
+// #pagebreak()
 
-= 问题记录
+// = 问题记录
 
 
-#pagebreak()
+// #pagebreak()
 
 = 下周计划
 *论文阅读*
