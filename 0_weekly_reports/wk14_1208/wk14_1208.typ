@@ -133,14 +133,20 @@
 #linebreak()
 #grid(columns: (100%), align: center, text(size: 12pt)[速 览])
 
-#tab 
+#tab 论文方面，本周阅读了 DDPM 后的经典工作 DDIM 的理论部分，DDIM 将 DDPM 中的 Markov 模型扩展为增广的 Markov 过程或是 $bx_0$ 条件下的一族 Markov 过程，并利用这一改变带来的性质同时达到兼容 DDPM 的训练成果和加速生成的目的。
+
+项目方面，本周对先前搭建的简易规则推断进行了测试，在测试的 6 个规则中有五个规则预测正确。
+
+其他自主学习方面，阅读了《非线性动力学与混沌》的第三章的部分内容，观看学习了《测度论》简易教程，了解了 $sigma$-代数、测度、测度空间、Lebesgue 测度的定义。
 
 #pagebreak()
 
 = 项目进展
 == 使用神经网络学习生命游戏的演化动力学
 
-#tab 
+#tab 本周对先前搭建的简易规则推断进行了测试，在测试的 6 个规则中有五个规则预测正确。但由于目前的代码位于另一台机器中，无法获取，将在下周完善可视化的工作。
+
+本周的规划工作重心为向 Overleaf 在线文章中同步至今的所有结果。
 
 #pagebreak()
 = 文献阅读
@@ -233,120 +239,123 @@ $
 
 #pagebreak()
 
-== Reconciling modern machine learning practice  and the bias-variance trade-off #cite(<Belkin_2019_double_descent>)
+// == Reconciling modern machine learning practice  and the bias-variance trade-off #cite(<Belkin_2019_double_descent>)
 
-*#link("http://arxiv.org/abs/1812.11118")[Arxiv] | Mikhail Belkin et al.*
-
-
+// *#link("http://arxiv.org/abs/1812.11118")[Arxiv] | Mikhail Belkin et al.*
 
 
-#pagebreak()
-
-== Scalable Diffusion Models with Transformers
-
-#pagebreak()
-
-= 学习进度
-// == 机器学习理论
-// === Markov Chain Monte Carlo (MCMC)
-
-
-// === EM 算法 
-
-
-// === 计算学习理论
 
 
 // #pagebreak()
 
-// == 随机过程
-
-// #h(2em)本周学习了连续状态的 Markov 链。
+// == Scalable Diffusion Models with Transformers
 
 // #pagebreak()
 
-// == 随机微分方程
-// #h(2em)本周开始学习 SDE 解的存在性和唯一性。
-
-// #pagebreak()
-
-== 实分析
-=== 动机
-#h(2em)第一个问题源于 Fourier 变换。
-
-第二个问题是极限和积分的可交换性。
-
-第三个问题是可求长曲线的问题。
-
-第四个问题是
-
-=== Cantor 集
-
-#definition[Cantor 集][
-  定义这样的一列集合 ${C_n}_(n=1)^(infinity)$，其中 $C_0 = [0, 1]$。$C_1 = display([0, 1/3] union [2/3, 1])$，相当于将 $C_0$ 中的闭区间每个切成三份，弃去中间的一份。然后一直这样做下去，得到 $C_2$，$C_3$ 等等。Cantor 集 $cal(C)$ 定义为这些集合的交：
-  $
-    cal(C) = inter.big_(i=1)^infinity C_i
-  $
-]
-
-#figure(
-  image("/assets/image.png", width: 50%), 
-  caption: [Cantor 集的构造]
-)
-
-它有一些有趣的性质，例如它的“长度”为零，但它却是不可数集。
-
-// === 外测度
+// = 学习进度
+// // == 机器学习理论
+// // === Markov Chain Monte Carlo (MCMC)
 
 
-#pagebreak() 
-
-== 动力系统基础
-=== 分岔
+// // === EM 算法 
 
 
-=== 圆上的流
+// // === 计算学习理论
 
 
-=== 线性系统
+// // #pagebreak()
+
+// // == 随机过程
+
+// // #h(2em)本周学习了连续状态的 Markov 链。
+
+// // #pagebreak()
+
+// // == 随机微分方程
+// // #h(2em)本周开始学习 SDE 解的存在性和唯一性。
+
+// // #pagebreak()
+
+// == 实分析
+// === 动机
+// #h(2em)第一个问题源于 Fourier 变换。
+
+// 第二个问题是极限和积分的可交换性。
+
+// 第三个问题是可求长曲线的问题。
+
+// 第四个问题是
+
+// === Cantor 集
+
+// #definition[Cantor 集][
+//   定义这样的一列集合 ${C_n}_(n=1)^(infinity)$，其中 $C_0 = [0, 1]$。$C_1 = display([0, 1/3] union [2/3, 1])$，相当于将 $C_0$ 中的闭区间每个切成三份，弃去中间的一份。然后一直这样做下去，得到 $C_2$，$C_3$ 等等。Cantor 集 $cal(C)$ 定义为这些集合的交：
+//   $
+//     cal(C) = inter.big_(i=1)^infinity C_i
+//   $
+// ]
+
+// #figure(
+//   image("/assets/image.png", width: 50%), 
+//   caption: [Cantor 集的构造]
+// )
+
+// 它有一些有趣的性质，例如它的“长度”为零，但它却是不可数集。
+
+// // === 外测度
 
 
-// #h(2em)
+// #pagebreak() 
 
-// #pagebreak()
+// == 动力系统基础
+// === 分岔
 
-// = 问题记录
+
+// === 圆上的流
 
 
-// #pagebreak()
+// === 线性系统
+
+
+// // #h(2em)
+
+// // #pagebreak()
+
+// // = 问题记录
+
+
+// // #pagebreak()
 
 = 下周计划
 *论文阅读*
 + 生成模型
-  - 薛定谔桥
-  - DDIM
+  - DiT
++ 机器学习理论
+  - Reconciling modern machine learning practice  and the bias-variance trade-off
 
 *项目进度*
 + 使用神经网络学习生命游戏的演化动力学
-  - 考虑另外两种方法的实现
   - 更新在线 Overleaf 文档
-+ 耦合约瑟夫森结
-  - 将 MATLAB 模拟代码全部迁移至 Python 
-  - 考虑简单的 Neural SDE 方法解带参 OU 过程的参数
 
 *理论学习*
 + 随机过程课程
-  - 复习 Poisson 过程和 Markov 过程
+  - 开始总复习
 + 随机微分方程
   - 第五章完成
++ 非线性动力学与混沌
+  - 第三章、第四章
++ Stein 实分析
+  - 第一章
++ Sakurai 现代量子力学
+  - 第一章
 
 #pagebreak()
 
-= 附录
+// = 附录
 
 
 
-#pagebreak()
+// #pagebreak()
 
 #set text(lang: "en")
 
