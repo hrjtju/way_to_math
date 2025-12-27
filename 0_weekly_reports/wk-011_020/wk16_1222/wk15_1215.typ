@@ -139,7 +139,11 @@
 #linebreak()
 #grid(columns: (100%), align: center, text(size: 12pt)[速 览])
 
-#tab 本周阅读了 DiT，是 Diffusion 的一个高效高性能的工程化实践。在生命游戏项目中初步实现了朴素的规则推断机制，但不具有鲁棒性，也欠缺在实际训练集上验证。最后本周学习了少许 SDE 和量子力学的内容。
+#tab 本周大部分时间花在了阅读 #schrodinger 桥论文#cite(<debortoli2023diffusionschrodingerbridgeapplications>)，它给出了一个以 #schrodinger 桥问题观察生成模型的视角。一般的薛定谔桥问题（或静态薛定谔桥问题）没有闭式解，作者转而通过修改 IPF 算法使之适配分数匹配生成模型的框架，并采用迭代的方式学习薛定谔桥。
+
+在生命游戏项目方面，本周实现了一个极小的朴素规则提取函数，在 `B3678/S34678` 数据集上可以成功提取规则。
+
+最后本周学习了 Stein 实分析中开篇的少量内容。
 
 #pagebreak()
 
@@ -147,53 +151,20 @@
 == 使用神经网络学习生命游戏的演化动力学
 #tab 
 
-#figure(
-  grid(
-    columns: 1,
-    image("stats_out-B36_S23-0007.svg", width: 100%),
-    image("stats_out-B36_S23-0008.svg", width: 100%)
-  ),
-  caption: [同一次 B36/S23 规则数据训练中生命游戏演化统计数据及硬编码阈值对比]
-)
+#image("stats_out-B36_S23-0007.svg")
+#image("stats_out-B36_S23-0008.svg")
 
-#tab 首先考虑的是直接根据频数、正确率和模型预测确信程度设置阈值。第一个条件为频数需要大于等于某个设定的阈值 $alpha$，其值与正确率和该类（ $x_t$ 时刻细胞状态是存活还是死亡）相关；第二个条件是模型对存活的预测要足够确信，即预测为存活的频数至少为预测为死亡频数的 $beta$ 倍。对应于 Python 代码如下：
+
+将统计用数据序列添加扰动：
+$
+  x' = [mono("float") compose mono("clamp")_([0, 1]) compose mono("int")](x + 0.5 + 0.1 dot epsilon)
+$
+
+将等变网络的群改变为 $p 8$ （包括以 $45 degree$ 为单位的旋转变换和平移变换），只需将下列函数中参数改为 `n=8`:
 
 ```python 
-def infer_rule_str(self, counters, acc) -> Tuple[List, List]:
-    dd, dl = sum(counters[0].values()), sum(counters[1].values())
-    ld, ll = sum(counters[2].values()), sum(counters[3].values())
-    
-    th_ratio = 0.6
-    self.d_th = int(th_ratio * (1-acc/100) * (dd+dl))
-    self.l_th = int(th_ratio * (1-acc/100) * (ld+ll))
-    
-    print(dd, dl, ld, ll, self.d_th, self.l_th, acc)
-    
-    d_all = counters[0] + counters[1]
-    l_all = counters[2] + counters[3]
-    
-    filtered_b = sorted(list(filter(lambda x:x[1]>self.d_th, d_all.items())), key=lambda x:x[0])
-    filtered_s = sorted(list(filter(lambda x:x[1]>self.l_th, l_all.items())), key=lambda x:x[0])
-    
-    self.born = []
-    self.survive = []
 
-    list_str = lambda x:list(map(lambda k:str(int(k)), x))
-    
-    for i,_ in filtered_b:
-        if counters[1][i] > 10 * counters[0][i]:
-            self.born.append(i)
-
-    for i,_ in filtered_s:
-        if counters[3][i] > 10 * counters[2][i]:
-            self.survive.append(i)
-    
-    return list_str(self.born), list_str(self.survive)
 ```
-
-#tab 另外考虑在上述统计中邻居存活数分布极度偏倚的情况。考虑将统计用数据序列添加扰动，如以 $gamma$ 概率将一个死细胞翻转为活细胞；或在某些情况下增加训练数据中刚开始若干轮被采样到的概率。
-
-将等变网络的群改变为 $p 8$ （包括以 $45 degree$ 为单位的旋转变换和平移变换），只需将下列函数中参数改为 `n=8` 即可。
 
 #pagebreak()
 = 文献阅读
@@ -330,21 +301,89 @@ def infer_rule_str(self, counters, acc) -> Tuple[List, List]:
 
 #tab 本周参阅了 MIT 的生成模型课程笔记，这是一本五十页的小册子，本周读完了大半部分内容。由于先前阅读了不少相关方面的论文，阅读起来没什么障碍，不过该讲义依然给予我了一些比较优雅的视角。
 
+#pagebreak()
+
 == 随机微分方程
+=== 一维解的构造
 
-#tab 本周阅读了 SDE 解的存在性和唯一性定理的证明部分。
+#tab 设 $b: RR -> RR$ 为 $scr(C)^1$ 函数且 $|b'| <= L$。考虑 SDE:
+$
+  dd X = b(X) dd t + dd W,  X(0) = x_0 in RR
+$
+
+通过 Picard 迭代构造解 $X^((0))(t) equiv x_0$递推式为
+$
+X^((k+1))(t) := x_0 + integral_0^t b(X^((k))) dd s + W(t)
+$
+并定义 
+$
+D^((k))(t) := max_(0 <= s <= t) |X^((k+1))(s) - X^((k))(s)|
+$
+可以用归纳法证明 
+$
+D^((k))(t) <= C L^k/(k!) t^k
+$
+由此可得$X^((k))$是 Cauchy 列，几乎必然一致收敛到 SDE 的解$X $。
+
+=== 变量替换法
+
+#tab 对一般 SDE $dd X = b(X) dd t + sigma(X) dd W, quad X(0) = x_0$，设 $X = u(Y) $，其中 $Y$ 满足
+$dd Y = f(Y) dd t + dd W, quad Y(0) = y_0$。由 Itô 公式可得
+$ 
+  dd X = [u'(Y) f(Y) + 1/2 u''(Y)] dd t + u'(Y) dd W 
+$
+因此需要满足：
+$ 
+  u'(Y) = sigma(u(Y)), #h(1em)u'(Y) f(Y) + 1/2 u''(Y) = b(u(Y)), #h(1em)u(y_0) = x_0 
+$
+可以先解 ODE $u'(z) = sigma(u(z)), u(y_0) = x_0 $，然后定义：
+$ 
+  f(z) := [b(u(z)) - 1/2 u''(z)] / sigma(u(z)) 
+$
+即为原 SDE 的解。
+
+=== 存在唯一性定理
+
+#theorem[Gronwall 不等式][
+  设$f, phi$是 $[0, T]$ 上的非负连续函数，若
+  $ 
+    phi(t) <= C_0 + integral_0^t f phi dd s 
+  $
+  则
+  $ 
+    phi(t) <= C_0 exp(integral_0^t f dd s) 
+  $
+]
+#proof[
+  令 $Phi = C_0 + integral_0^t f phi dd s $ ，则 $Phi' = f phi <= f Phi $。计算$[exp(-integral_0^t f dd s) Phi]' <= 0 $，故 $exp(-integral_0^t f dd s) Phi(t) <= C_0 $，得证。
+]
+
+#theorem[存在唯一性定理][
+  设$b: RR^n x [0,T] -> RR^n$和$B: RR^n x [0,T] -> RR^(m x n)$满足一致 Lipschitz 条件：
+  $ |b(x,t) - b(hat(x),t)| <= L|x - hat(x)| $
+  $ |B(x,t) - B(hat(x),t)| <= L|x - hat(x)| $
+  及线性增长条件：
+  $ |b(x,t)| <= L(1+|x|) $
+  $ |B(x,t)| <= L(1+|x|) $
+
+  若$E|X_0|^2 < infinity $，则 SDE:
+  $ dd X = b(X,t) dd t + B(X,t) dd W, quad X(0) = X_0 $
+  存在唯一解$X in L_n^2(0,T) $，且在概率$1$意义下唯一。
+]
 
 
-// == 实分析
+#pagebreak()
 
-// #tab 我们希望扩展长度、面积或是体积的概念，使之适用于一般的集合。形式上，我们希望存在一个这样的映射 $mu: cal(A) -> [0, infinity]$，其中 $cal(A) subset 2^Omega$，并满足下面的性质：
-// + 非负性 (non-negativity)：对任意 $A in cal(A)$，有 $mu(A) >= 0$；
-// + 空集的测度为零 (null empty set)：$mu(emptyset) = 0$；
-// + 可数可加性 (countable additivity)：对任意可数个两两不交的集合 ${A_i}_(i in NN) subset cal(A)$，有 $
-// mu(union.big_(i in NN) A_i) = sum_(i in NN) mu(A_i)
-// $
+== 实分析
 
-// #pagebreak()
+#tab 我们希望扩展长度、面积或是体积的概念，使之适用于一般的集合。形式上，我们希望存在一个这样的映射 $mu: cal(A) -> [0, infinity]$，其中 $cal(A) subset 2^Omega$，并满足下面的性质：
++ 非负性 (non-negativity)：对任意 $A in cal(A)$，有 $mu(A) >= 0$；
++ 空集的测度为零 (null empty set)：$mu(emptyset) = 0$；
++ 可数可加性 (countable additivity)：对任意可数个两两不交的集合 ${A_i}_(i in NN) subset cal(A)$，有 $
+mu(union.big_(i in NN) A_i) = sum_(i in NN) mu(A_i)
+$
+
+#pagebreak()
 
 == 量子力学
 
@@ -407,29 +446,31 @@ $
 
 = 下周计划
 *论文阅读*
-+ 生成模型：EDM、LDM、ADM
-+ Neural SDE 相关经典论文
++ 生成模型
+  - 薛定谔桥
+  - DDIM
 
 *项目进度*
 + 使用神经网络学习生命游戏的演化动力学
-  - 实现提取规则后的即时测试
-  - 对四种不同的情况设置四种不同的阈值
-  - 考虑基于 likelihood 的规则搜索算法
+  - 考虑另外两种方法的实现
+  - 更新在线 Overleaf 文档
 + 耦合约瑟夫森结
-  - 实现简单的 Neural SDE
+  - 将 MATLAB 模拟代码全部迁移至 Python 
+  - 考虑简单的 Neural SDE 方法解带参 OU 过程的参数
 
 *理论学习*
-随机过程课即将考试，本周和下周不设其他学习内容。
 + 随机过程课程
-  - 总复习，复习第一章和第二章
+  - 复习 Poisson 过程和 Markov 过程
++ 随机微分方程
+  - 第五章完成
 
 #pagebreak()
 
-// = 附录
+= 附录
 
 
 
-// #pagebreak()
+#pagebreak()
 
 #set text(lang: "en")
 
