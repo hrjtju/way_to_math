@@ -10,9 +10,9 @@
 #show strong: set text(blue)
 #show: thmrules.with(qed-symbol: $square$)
 
-#let wk_report_name = "中山大学 MA7259《机器学习》期中作业"
-#let header_name = "中山大学 MA7259《机器学习》期中作业"
-#let project_name = "<数据集>的分析和预测"
+#let wk_report_name = "中山大学 MA7259《机器学习》期末作业"
+#let header_name = "中山大学 MA7259《机器学习》期末作业"
+#let project_name = "基于模型的肺部肿瘤分割研究"
 #let name_no = "何瑞杰 25110801"
 
 #let const = "constant"
@@ -79,6 +79,9 @@
   ]
 )
 #pagebreak()
+
+点击链接查看和 Kimi 的对话 https://www.kimi.com/share/19b5f848-c632-8690-8000-000076b6a4b4
+点击链接查看和 Kimi 的对话 https://www.kimi.com/share/19b5f850-a912-8161-8000-000063fea791
 
 = 研究背景与目的
 
