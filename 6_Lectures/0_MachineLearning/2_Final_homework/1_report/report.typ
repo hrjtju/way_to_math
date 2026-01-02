@@ -12,7 +12,7 @@
 
 #let wk_report_name = "中山大学 MA7259《机器学习》期末作业"
 #let header_name = "中山大学 MA7259《机器学习》期末作业"
-#let project_name = "基于扩散分割模型的肺部肿瘤分割研究"
+#let project_name = "基于nnU-Net模型的小样本肺部肿瘤分割研究"
 #let name_no = "何瑞杰 25110801"
 
 #let const = "constant"
@@ -50,7 +50,7 @@
 #set page(
   paper: "a4",
   numbering: "1",
-  header: header_name + " | " + project_name + " | " + name_no,
+  header: header_name + " | " + name_no,
 )
 
 #set par(
@@ -88,43 +88,39 @@
 
 = 研究背景与目的
 
-#h(2em)#lorem(100)
+#h(2em)
 
-#lorem(100)
+#pagebreak()
 
-#lorem(100)
+= 数据集介绍
 
-#lorem(100)
+#h(2em) 本研究采用的数据为数据集是医学图像分割十项全能挑战赛  (Medical Segmentation Decathlon, MSD)#cite(<MSD-Dataset-antonelli2022medical>) 中的第 6 个子任务，即 MSD Lung Tumours 数据集#cite(<MSD-Paper-simpson2019large>)。其目标是从 CT 图像中分割出肺部肿瘤，MSD 选择该数据集的原因是“在大的背景中分割出小目标”。该数据集包含 96 例非小细胞肺癌患者的薄层CT扫描，官方划分为 64 例训练集和 32 例测试集，其中测试集可以通过官网提交分割结果进行测试。
+
+非小细胞肺癌（NSCLC）作为肺癌中最常见的类型，占据了大约 85% 的肺癌病例，主要包含鳞状细胞癌、腺癌和大细胞癌等亚型。与小细胞肺癌相比，NSCLC 的生长速度通常较慢，治疗手段也更为多样化，通常取决于肿瘤的具体类型、发展阶段以及患者整体的健康状况。在 NSCLC 的诊断和治疗过程中，CT扫描扮演着至关重要的角色。它能提供关于肿瘤大小、形状和位置的详细信息，帮助医生确定病变的精确阶段，并指导手术和放疗计划。此外，CT 图像对于监测肿瘤对治疗的响应和检测复发或转移至关重要
+
+
+
 #pagebreak()
 
 = 探索性数据分析
 
-#h(2em)#lorem(100)
+#h(2em)
 
-#lorem(100)
-
-#lorem(100)
-
-#lorem(100)
 #pagebreak()
 
 = 方法与模型
 
-#h(2em)#lorem(100)
-#lorem(100)
+#h(2em)
 
-#lorem(100)
-
-#lorem(100)
 #pagebreak()
 
 = 实验与结论
 
-#h(2em)#lorem(100)
+#h(2em)
 
-#lorem(100)
+#pagebreak()
 
-#lorem(100)
+= 计算机程序代码说明
 
 #pagebreak()
 

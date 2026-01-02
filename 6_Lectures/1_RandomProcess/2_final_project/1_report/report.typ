@@ -10,10 +10,21 @@
 #show strong: set text(blue)
 #show: thmrules.with(qed-symbol: $square$)
 
-#let wk_report_name = "中山大学 DCS5706《随机过程及应用》期末作业"
-#let header_name = "中山大学 MA7259《机器学习》期末作业"
-#let project_name = "基于模型的肺部肿瘤分割研究"
 #let name_no = "何瑞杰 25110801"
+
+#let lecture_name = "随机过程及应用"
+#let lecture_code = "DCS5706"
+
+#let header_name = [
+  中山大学
+  #lecture_code
+  《
+  #lecture_name
+  》
+  期末作业
+]
+
+#let project_name = [$M"/"M"/"1$ 排队系统服务速率控制]
 
 #let const = "constant"
 #let bx = $bold(x)$
@@ -50,7 +61,7 @@
 #set page(
   paper: "a4",
   numbering: "1",
-  header: header_name + " | " + project_name + " | " + name_no,
+  header: header_name + " | " + name_no,
 )
 
 #set par(
@@ -64,7 +75,7 @@
 
 #align(
   center, 
-  text(12pt)[#wk_report_name\ ] + v(0.5em) 
+  text(12pt)[#header_name\ ] + v(0.5em) 
         + text(17pt)[#project_name\ ]
         + text(12pt)[\ #name_no]
 )
@@ -78,6 +89,9 @@
     #lorem(100)
   ]
 )
+
+#outline()
+
 #pagebreak()
 
 点击链接查看和 Kimi 的对话 https://www.kimi.com/share/19b5f848-c632-8690-8000-000076b6a4b4
@@ -85,43 +99,29 @@
 
 = 研究背景与目的
 
-#h(2em)#lorem(100)
+#h(2em)
 
-#lorem(100)
-
-#lorem(100)
-
-#lorem(100)
 #pagebreak()
 
 = 探索性数据分析
 
-#h(2em)#lorem(100)
+#h(2em)
 
-#lorem(100)
-
-#lorem(100)
-
-#lorem(100)
 #pagebreak()
 
 = 方法与模型
 
-#h(2em)#lorem(100)
-#lorem(100)
+#h(2em)
 
-#lorem(100)
-
-#lorem(100)
 #pagebreak()
 
 = 实验与结论
 
-#h(2em)#lorem(100)
+#h(2em)
 
-#lorem(100)
+#pagebreak()
 
-#lorem(100)
+= 计算机程序代码说明
 
 #pagebreak()
 
