@@ -10,7 +10,7 @@
 #show strong: set text(blue)
 #show: thmrules.with(qed-symbol: $square$)
 
-#let wk_report_name = "中山大学 MA7259《机器学习》期末作业"
+#let wk_report_name = "中山大学 DCS5706《随机过程及应用》期末作业"
 #let header_name = "中山大学 MA7259《机器学习》期末作业"
 #let project_name = "基于模型的肺部肿瘤分割研究"
 #let name_no = "何瑞杰 25110801"

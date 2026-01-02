@@ -12,7 +12,7 @@
 
 #let wk_report_name = "中山大学 MA7259《机器学习》期末作业"
 #let header_name = "中山大学 MA7259《机器学习》期末作业"
-#let project_name = "基于模型的肺部肿瘤分割研究"
+#let project_name = "基于扩散分割模型的肺部肿瘤分割研究"
 #let name_no = "何瑞杰 25110801"
 
 #let const = "constant"
@@ -78,6 +78,9 @@
     #lorem(100)
   ]
 )
+
+#outline()
+
 #pagebreak()
 
 点击链接查看和 Kimi 的对话 https://www.kimi.com/share/19b5f848-c632-8690-8000-000076b6a4b4
