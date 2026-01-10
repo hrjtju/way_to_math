@@ -79,7 +79,8 @@ class SegTrainer:
         self.dataset_cfg = self.loaders_cfg["dataset"]
         self.dataset_train = getattr(datasets, self.dataset_cfg["name"])(**filter_name(self.dataset_cfg), 
                                                                          train=True, 
-                                                                         transform=self.transforms["train"])
+                                                                         transform=self.transforms["train"],
+                                                                         slice_builder_config=self.loaders_cfg["train"]["slice_builder"])
         self.dataloader_train = DataLoader(self.dataset_train, batch_size=self.loaders_cfg["batch_size"])
         
     def get_transform(self, cfg: dict):
@@ -114,15 +115,17 @@ class SegTrainer:
         pbar = tqdm(self.dataloader_train, desc=f"Train Epoch {self.epoch}")
         for batch in pbar:
             # move training data and label to device
-            image = batch['image'].to(self.device, dtype=torch.float32)  # (B, 1, D, H, W)
-            target = batch['target'].to(self.device, dtype=torch.long)    # (B, D, H, W)
+            image = batch[0].to(self.device, dtype=torch.float32)  # (B, 1, D, H, W)
+            target = batch[1].to(self.device, dtype=torch.float32)    # (B, D, H, W)
+            
+            target, target_border = target[:, :1, ...], target[:, 1:, ...]
             
             # prediction
             self.optimizer.zero_grad()
-            pred = self.network(image)  # output shape same as input
+            pred, logits = self.network(image, return_logits=True)  # output shape same as input
             
             # compute loss
-            loss = self.loss_fn(pred, target)
+            loss = self.loss_fn(logits, target)
             
             # backward pass
             loss.backward()

@@ -1,54 +1,11 @@
 import os
-from torch.utils.data import Dataset
-import nibabel as nib
 import json
 import numpy as np
+import nibabel as nib
+from torch.utils.data import Dataset
 import yaml
-
 from utils import FilterSliceBuilder, SliceBuilder, get_slice_builder, mirror_pad
 
-class RawMSDLungDataset(Dataset):
-    def __init__(self, base_path, json_path, train=True, transform=None):
-        # define augmentation transforms
-        self.transform = transform
-        
-        self.data_list = []
-        self.train = train
-        
-        # load json file containing dataset information
-        with open(json_path, 'r') as json_file:
-            self.json_info = json.load(json_file)
-        self.base_path = base_path
-        
-        # length of the dataset
-        self.len = self.json_info["numTraining"] if self.train else self.json_info["numTest"]
-        self.data_file_list = self.json_info["training"] if self.train else self.json_info["test"]
-
-    def __len__(self):
-        return self.len
-
-    def add_base(self, relative_path):
-        return os.path.join(self.base_path, relative_path)
-    
-    def __getitem__(self, idx):
-        # fetch image and label paths
-        img_path = self.add_base(self.data_file_list[idx]['image'])
-        img = nib.load(img_path).get_fdata()
-        
-        if self.transform:
-            img = self.transform["raw"](img)
-        
-        if self.train:
-            label_path = self.add_base(self.data_file_list[idx]['label'])
-            label = nib.load(label_path).get_fdata()
-            
-            if self.transform:
-                label = self.transform["label"](label)
-            
-            return img, label
-        else:
-            # skip the label in testing mode
-            return img
 class RawMSDLungPatchDataset(Dataset):
     def __init__(self, base_path, json_path, train=True, transform=None, slice_builder_config=None):
         # define augmentation transforms
@@ -77,7 +34,7 @@ class RawMSDLungPatchDataset(Dataset):
             
             # 只加载shape信息，不加载完整数据
             nib_img = nib.load(img_path)
-            volume_shape = tuple(nib_img.dataobj.shape[i] for i in (2, 1, 0)) # (Z, Y, X)
+            volume_shape = nib_img.dataobj.shape  # (Z, Y, X)
             
             # 创建伪HDF5接口（适配SliceBuilder）
             class PseudoH5Dataset:
@@ -103,11 +60,11 @@ class RawMSDLungPatchDataset(Dataset):
     def _load_volume(self, volume_idx):
         """按需加载单个体积"""
         img_path = os.path.join(self.base_path, self.data_file_list[volume_idx]['image'])
-        img = nib.load(img_path).get_fdata().astype(np.float32).transpose(2, 1, 0)
+        img = nib.load(img_path).get_fdata().astype(np.float32)
         
         if self.train:
             label_path = os.path.join(self.base_path, self.data_file_list[volume_idx]['label'])
-            label = nib.load(label_path).get_fdata().astype(np.int64).transpose(2, 1, 0)
+            label = nib.load(label_path).get_fdata().astype(np.int64)
             return img, label
         return img, None
     
