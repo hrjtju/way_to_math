@@ -3,7 +3,7 @@ logging:
   save_dir: "D:/Research/Mathematics/SYSU_GBU/6_Lectures/0_MachineLearning/2_Final_homework/2_code/checkpoints"
 
 model:
-  name: UNet3D
+  name: ResidualUNet3D
   # number of input channels to the model
   in_channels: 1
   # number of output channels

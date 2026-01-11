@@ -14,6 +14,7 @@ from typing import Callable
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
+from torch.amp import autocast
 
 
 def create_conv(
@@ -874,6 +875,7 @@ class AbstractUNet(nn.Module):
             # regression problem
             self.final_activation = None
 
+    @autocast(device_type="cuda")
     def forward(self, x, return_logits=False):
         """
         Forward pass through the network.
@@ -894,6 +896,7 @@ class AbstractUNet(nn.Module):
             return output, logits
         return output
 
+    @autocast(device_type="cuda")
     def _forward_logits(self, x):
         # encoder part
         encoders_features = []
@@ -1052,85 +1055,6 @@ class ResidualUNetSE3D(AbstractUNet):
         )
 
 
-class UNet2D(AbstractUNet):
-    """2D U-Net model from "U-Net: Convolutional Networks for Biomedical Image Segmentation".
-
-    Reference: https://arxiv.org/abs/1505.04597
-    """
-
-    def __init__(
-        self,
-        in_channels,
-        out_channels,
-        final_sigmoid=True,
-        f_maps=64,
-        layer_order="gcr",
-        num_groups=8,
-        num_levels=4,
-        is_segmentation=True,
-        conv_padding=1,
-        conv_upscale=2,
-        upsample="default",
-        dropout_prob=0.1,
-        **kwargs,
-    ):
-        super().__init__(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            final_sigmoid=final_sigmoid,
-            basic_module=DoubleConv,
-            f_maps=f_maps,
-            layer_order=layer_order,
-            num_groups=num_groups,
-            num_levels=num_levels,
-            is_segmentation=is_segmentation,
-            conv_padding=conv_padding,
-            conv_upscale=conv_upscale,
-            upsample=upsample,
-            dropout_prob=dropout_prob,
-            is3d=False,
-        )
-
-
-class ResidualUNet2D(AbstractUNet):
-    """Residual 2D U-Net model implementation.
-
-    Reference: https://arxiv.org/pdf/1706.00120.pdf
-    """
-
-    def __init__(
-        self,
-        in_channels,
-        out_channels,
-        final_sigmoid=True,
-        f_maps=64,
-        layer_order="gcr",
-        num_groups=8,
-        num_levels=5,
-        is_segmentation=True,
-        conv_padding=1,
-        conv_upscale=2,
-        upsample="default",
-        dropout_prob=0.1,
-        **kwargs,
-    ):
-        super().__init__(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            final_sigmoid=final_sigmoid,
-            basic_module=ResNetBlock,
-            f_maps=f_maps,
-            layer_order=layer_order,
-            num_groups=num_groups,
-            num_levels=num_levels,
-            is_segmentation=is_segmentation,
-            conv_padding=conv_padding,
-            conv_upscale=conv_upscale,
-            upsample=upsample,
-            dropout_prob=dropout_prob,
-            is3d=False,
-        )
-
 def get_class(class_name: str, modules: list[str]) -> type:
     """Helper function which searches for a class in the given list of modules and returns it."""
     for module in modules:
@@ -1158,10 +1082,7 @@ if __name__ == "__main__":
         cfg = yaml.safe_load(f)
     
     model_cfg = cfg["model"]
-    
     print(model_cfg)
-    
-    
     
     model: torch.nn.Module|Callable[[torch.Tensor], torch.Tensor] = get_model(model_cfg)
     print(model) 

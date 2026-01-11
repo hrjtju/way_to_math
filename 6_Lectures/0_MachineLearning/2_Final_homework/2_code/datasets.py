@@ -1,9 +1,11 @@
 import os
+import h5py
 from torch.utils.data import Dataset
 import nibabel as nib
 import json
 import numpy as np
 import yaml
+from functools import lru_cache
 
 from utils import FilterSliceBuilder, SliceBuilder, get_slice_builder, mirror_pad
 
@@ -24,6 +26,7 @@ class RawMSDLungDataset(Dataset):
         self.len = self.json_info["numTraining"] if self.train else self.json_info["numTest"]
         self.data_file_list = self.json_info["training"] if self.train else self.json_info["test"]
 
+        
     def __len__(self):
         return self.len
 
@@ -50,10 +53,10 @@ class RawMSDLungDataset(Dataset):
             # skip the label in testing mode
             return img
 class RawMSDLungPatchDataset(Dataset):
-    def __init__(self, base_path, json_path, train=True, transform=None, slice_builder_config=None):
+    def __init__(self, base_path, json_path, mode=True, transform=None, slice_builder_config=None):
         # define augmentation transforms
         self.transform = transform
-        self.train = train
+        self.mode = mode
         self.slice_builder_config = slice_builder_config or {}
         
         # load json file containing dataset information
@@ -62,7 +65,7 @@ class RawMSDLungPatchDataset(Dataset):
         self.base_path = base_path
         
         # train / test set file list
-        self.data_file_list = self.json_info["training"] if self.train else self.json_info["test"]
+        self.data_file_list = self.json_info[self.mode]
         
         # constructing patch index
         self.patch_index = []  # [(volume_idx, slice_obj), ...]
@@ -70,14 +73,19 @@ class RawMSDLungPatchDataset(Dataset):
         
         print(f"Total patches: {len(self.patch_index)}")
         
+        self._load_volume = lru_cache(maxsize=8)(self._load_volume_impl)
+        
     def _build_patch_index(self):
         """预计算所有体积中的所有patch索引"""
         for volume_idx, file_info in enumerate(self.data_file_list):
-            img_path = os.path.join(self.base_path, file_info['image'])
+            if self.mode == "test":
+                img_path = os.path.join(self.base_path, file_info)
+            else:
+                img_path = os.path.join(self.base_path, file_info['image'])
             
-            # 只加载shape信息，不加载完整数据
-            nib_img = nib.load(img_path)
-            volume_shape = tuple(nib_img.dataobj.shape[i] for i in (2, 1, 0)) # (Z, Y, X)
+            with h5py.File(img_path, 'r') as f:
+                h5_shape = f['data'].shape  # (X, Y, Z)
+                volume_shape = (h5_shape[2], h5_shape[1], h5_shape[0])  # (Z, Y, X)
             
             # 创建伪HDF5接口（适配SliceBuilder）
             class PseudoH5Dataset:
@@ -88,7 +96,7 @@ class RawMSDLungPatchDataset(Dataset):
             # 根据数据维度调整（单通道CT）
             ndim = 3  # MSD Lung是3D体积
             raw_h5 = PseudoH5Dataset(volume_shape, ndim=ndim)
-            label_h5 = None if not self.train else PseudoH5Dataset(volume_shape, ndim=ndim)
+            label_h5 = None if self.mode=="test" else PseudoH5Dataset(volume_shape, ndim=ndim)
             
             # 构建该体积的SliceBuilder
             slice_builder = SliceBuilder(raw_h5, label_h5, **self.slice_builder_config)
@@ -100,15 +108,24 @@ class RawMSDLungPatchDataset(Dataset):
     def __len__(self):
         return len(self.patch_index)
     
-    def _load_volume(self, volume_idx):
+    def _load_volume_impl(self, volume_idx):
         """按需加载单个体积"""
-        img_path = os.path.join(self.base_path, self.data_file_list[volume_idx]['image'])
-        img = nib.load(img_path).get_fdata().astype(np.float32).transpose(2, 1, 0)
+        file_info = self.data_file_list[volume_idx]
         
-        if self.train:
-            label_path = os.path.join(self.base_path, self.data_file_list[volume_idx]['label'])
-            label = nib.load(label_path).get_fdata().astype(np.int64).transpose(2, 1, 0)
+        if self.mode == "test":
+            img_path = os.path.join(self.base_path, file_info)
+        else:
+            img_path = os.path.join(self.base_path, file_info['image'])
+            
+        with h5py.File(img_path, 'r') as f:
+            img = f['data'][:].astype(np.float32).transpose(2, 1, 0)
+        
+        if self.mode != "test":
+            label_path = os.path.join(self.base_path, file_info['label'])
+            with h5py.File(label_path, 'r') as f:
+                label = f['data'][:].astype(np.int64).transpose(2, 1, 0)
             return img, label
+        
         return img, None
     
     def __getitem__(self, idx):
@@ -122,14 +139,14 @@ class RawMSDLungPatchDataset(Dataset):
         img_patch = img[slice_obj]
         
         # 测试模式：添加halo并返回原始索引用于拼接
-        if not self.train and self.slice_builder_config.get('halo_shape', [0,0,0]) != [0,0,0]:
+        if self.mode == "test" and self.slice_builder_config.get('halo_shape', [0,0,0]) != [0,0,0]:
             halo_shape = self.slice_builder_config['halo_shape']
             img_patch = mirror_pad(img_patch, halo_shape)
             slice_obj_padded = tuple(slice(s.start, s.stop + 2*h) for s, h in zip(slice_obj, halo_shape))
             return self.transform["raw"](img_patch), slice_obj
         
         # 训练模式：提取标签patch
-        if self.train:
+        if self.mode != "test":
             label_patch = label[slice_obj]
             
             # 应用变换

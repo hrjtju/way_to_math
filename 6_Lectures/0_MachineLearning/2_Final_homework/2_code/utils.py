@@ -164,10 +164,6 @@ class FilterSliceBuilder(SliceBuilder):
         assert 0 <= threshold <= 1, "Threshold must be in the range [0, 1]"
         assert 0 <= slack_acceptance <= 1, "Slack acceptance must be in the range [0, 1]"
 
-        if not lazy_loader:
-            # if not lazy, load label dataset into memory for faster patch filtering
-            label_dataset = label_dataset[()]
-
         rand_state = np.random.RandomState(47)
 
         def ignore_predicate(raw_label_idx: tuple[slice, slice]) -> bool:

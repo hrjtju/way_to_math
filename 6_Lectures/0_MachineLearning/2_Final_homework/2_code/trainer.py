@@ -8,7 +8,7 @@ mofified by Ruijie HE according to code on website
 import importlib
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional, TypeAlias
@@ -19,6 +19,7 @@ from tqdm import tqdm
 import nibabel as nib
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from torch.amp import GradScaler, autocast_mode
 
 import transforms
 from transforms import Compose
@@ -45,6 +46,8 @@ class SegTrainer:
         # setting training device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
+        print(f"Using Device {self.device}")
+        
         # training status 
         self.epoch = 0
         self.best_metric = 0.0
@@ -61,27 +64,34 @@ class SegTrainer:
     
         # add neural network
         self.network: NNModel = get_model(self.cfg["model"])
+        self.network = self.network.to(self.device)
         print(f"Network Params: {sum(p.numel() for p in self.network.parameters()):,}")
     
-        self.optimizer = torch.optim.AdamW(**self.cfg["optimizer"], params=self.network.parameters())
+        self.optimizer: torch.optim.Optimizer = torch.optim.AdamW(**self.cfg["optimizer"], params=self.network.parameters())
     
-        self.scheduler = getattr(torch.optim.lr_scheduler, self.cfg["lr_scheduler"]["name"])(**filter_name(self.cfg["lr_scheduler"]), optimizer = self.optimizer) 
-    
+        self.scheduler: torch.optim.lr_scheduler.LRScheduler = getattr(torch.optim.lr_scheduler, self.cfg["lr_scheduler"]["name"])(**filter_name(self.cfg["lr_scheduler"]), optimizer = self.optimizer) 
+
+        
+        
         self.loss_fn = getattr(losses, self.cfg["loss"]["name"])(**filter_name(self.cfg["loss"]))
 
         # setting up datasets
         self.loaders_cfg = self.cfg["loaders"]
-        self.slice_builder = ...
         self.transforms = {
             "train": self.get_transform(self.loaders_cfg["train"]["transformer"]),
             "val": self.get_transform(self.loaders_cfg["val"]["transformer"]),
         }
         self.dataset_cfg = self.loaders_cfg["dataset"]
-        self.dataset_train = getattr(datasets, self.dataset_cfg["name"])(**filter_name(self.dataset_cfg), 
-                                                                         train=True, 
+        self.dataset_train: Dataset = getattr(datasets, self.dataset_cfg["name"])(**filter_name(self.dataset_cfg), 
+                                                                         mode="train", 
                                                                          transform=self.transforms["train"],
                                                                          slice_builder_config=self.loaders_cfg["train"]["slice_builder"])
-        self.dataloader_train = DataLoader(self.dataset_train, batch_size=self.loaders_cfg["batch_size"])
+        self.dataset_val: Dataset = getattr(datasets, self.dataset_cfg["name"])(**filter_name(self.dataset_cfg), 
+                                                                         mode="val", 
+                                                                         transform=self.transforms["val"],
+                                                                         slice_builder_config=self.loaders_cfg["train"]["slice_builder"])
+        self.dataloader_train = DataLoader(self.dataset_train, batch_size=self.loaders_cfg["batch_size"], shuffle=True)
+        self.dataloader_val = DataLoader(self.dataset_val, batch_size=4 * self.loaders_cfg["batch_size"], shuffle=False)
         
     def get_transform(self, cfg: dict):
         """
@@ -104,10 +114,10 @@ class SegTrainer:
                 
             tf = Compose(transforms=transforms_ls)
             raw_tf[k] = tf
-        
+           
         return raw_tf
     
-    def train_epoch(self) -> Dict[str, float]:
+    def train_epoch(self, scalar: GradScaler) -> Dict[str, float]:
         """train ONE epoch"""
         self.network.train()
         metrics = defaultdict(list)
@@ -122,24 +132,27 @@ class SegTrainer:
             
             # prediction
             self.optimizer.zero_grad()
-            pred, logits = self.network(image, return_logits=True)  # output shape same as input
             
-            # compute loss
-            loss = self.loss_fn(logits, target)
+            with torch.autocast(device_type="cuda"):
+                pred, logits = self.network(image, return_logits=True)  # output shape same as input
             
+                # compute loss
+                loss = self.loss_fn(logits, target)
+        
             # backward pass
-            loss.backward()
+            scalar.scale(loss).backward()
             if 'grad_clip' in self.cfg['training']:
                 torch.nn.utils.clip_grad_norm_(
                     self.network.parameters(), 
                     self.cfg['training']['grad_clip']
                 )
-            self.optimizer.step()
+            scalar.step(self.optimizer)
+            scalar.update()
             
             # 指标
             metrics['loss'].append(loss.item())
             
-            pbar.set_postfix({'loss': loss.item()})
+            pbar.set_postfix({'loss': f"{loss.item():.3f}"})
         
         return {k: np.mean(v) for k, v in metrics.items()}
     
@@ -151,19 +164,22 @@ class SegTrainer:
         metrics = defaultdict(list)
         
         with torch.no_grad():
-            pbar = tqdm(val_loader, desc=f"Val Epoch {self.epoch}")
+            pbar = tqdm(self.dataloader_val, desc=f"Val Epoch {self.epoch}")
             for batch in pbar:
-                image = batch['image'].to(self.device, dtype=torch.float32)
-                target = batch['target'].to(self.device, dtype=torch.long)
+                image = batch[0].to(self.device, dtype=torch.float32)
+                target = batch[1].to(self.device, dtype=torch.float32)
                 
-                # forward pass
-                pred = self.network(image)
+                target, target_border = target[:, :1, ...], target[:, 1:, ...]
                 
-                # compute loss
-                loss = self.loss_fn(pred, target)
+                with torch.autocast(device_type="cuda"):
+                    # forward pass`
+                    pred, logits = self.network(image, return_logits=True)
+                    
+                    # compute loss
+                    loss = self.loss_fn(logits, target)
+                    
                 metrics['loss'].append(loss.item())
-                
-                pbar.set_postfix({'loss': loss.item()})
+                pbar.set_postfix({'loss': f"{loss.item():.3f}"})
         
         return {k: np.mean(v) for k, v in metrics.items()}
     
@@ -172,24 +188,29 @@ class SegTrainer:
         main training loop
         """
         
-        print(f"Starting training [{self.cfg['training']['num_epochs']}] epochs")
+        torch.backends.cudnn.benchmark = True
         
-        for epoch in range(self.cfg['training']['num_epochs']):
+        print(f"Starting training [{self.cfg['training']['max_num_epochs']}] epochs")
+        
+        scaler = GradScaler()
+
+        for epoch in range(self.cfg['training']['max_num_epochs']):
             self.epoch = epoch
             
             # train ONE epoch
-            train_metrics = self.train_epoch(self.dataloader_train)
+            # train_metrics = self.train_epoch(scaler)
+            train_metrics = 0
             
             # validation
-            # val_metrics = self.validate(val_loader)
+            val_metrics = self.validate()
             
             # update LR scheduler
             if self.scheduler:
-                self.scheduler.step()
+                self.scheduler.step(val_metrics)
             
             # add logging info
             self._log_metrics({**train_metrics, 
-                            #    **val_metrics
+                               **val_metrics
                                })
             
             # save checkpoints
@@ -206,7 +227,7 @@ class SegTrainer:
         """
         print(f"Epoch {self.epoch}: " + 
               f"Train Loss: {metrics['loss']:.4f}, " +
-              f"Val Dice: {metrics['dice']:.4f}")
+              f"Val Loss: {metrics['dice']:.4f}")
         
         if self.cfg['logging']['use_wandb']:
             wandb.log(metrics, step=self.epoch)
@@ -261,6 +282,6 @@ if __name__ == "__main__":
     trainer = SegTrainer(r"D:\Research\Mathematics\SYSU_GBU\6_Lectures\0_MachineLearning\2_Final_homework\2_code\3d_unet_cfg.yaml")
     print(trainer.transforms)
     
-    trainer.train_epoch()
+    trainer.fit()
     
     # self.dataloader_train = torch.utils.data.DataLoader()
