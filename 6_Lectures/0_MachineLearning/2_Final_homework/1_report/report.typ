@@ -72,7 +72,6 @@
 
 #set heading(numbering: "1.")
 
-
 #align(
   center, 
   text(12pt)[#wk_report_name\ ] + v(0.5em) 
@@ -80,16 +79,15 @@
         + text(12pt)[\ #name_no]
 )
 
-
 #align(center, [摘#h(2em)要])
 #pad(
   left: 6em, right: 6em, 
   [
-    #lorem(100)
+    本研究针对非小细胞肺癌（NSCLC）CT影像中的小目标肿瘤分割问题，提出了基于3D-U-Net模型的深度学习方法。研究采用医学图像分割十项全能挑战赛（MSD）中的肺部肿瘤数据集，该数据集包含63例标注样本，具有小目标-小样本-大视野的典型特征。针对数据稀缺性和目标尺度极不平衡的挑战，本研究实现了三种3D分割模型：标准3D U-Net、3D残差U-Net和3D残差SE U-Net，并采用混合精度训练、数据切分和LRU缓存等优化策略提高训练效率。实验结果表明，在验证集上三个模型的Dice分数分别为0.1040、0.0682和0.0542，性能表现较低。分析认为这主要与肿瘤体积过小、位置分布不均、数据量有限以及计算资源约束等因素相关。本研究为深度学习在小目标3D医学影像分割任务中的应用提供了实践经验，并指出结合Transformer结构、迁移学习和元学习等方法可能是未来的改进方向。
   ]
 )
 
-#outline()
+#outline(depth: 2)
 
 #pagebreak()
 
@@ -179,7 +177,7 @@ $
 == 2D 和 3D U-Net
 === 2D U-Net
 
-#h(2em) U-Net 最初由 Olaf Ronneberger 等人【】于 2015 年提出，为的是解决 2D 医学影像分割任务，其得名于论文中的 U 形网络结构，如 #ref(<fig:2D-U-Net-Structure>) 所示。由图可见，U-Net 中有一些基本结构：$3 times 3$ 卷积和 $"ReLU"$ 组成的基本卷积模块、$1 times 1$ 卷积模块、复制剪贴模块 (copy and crop)、最大值池化下采样模块、以转置卷积为例的上采样模块。数据进入模型后，通过不断通过 $3 times 3$ 卷积模块和下采样模块，得到多种大小尺度的特征图。在经过 U-Net 最下一层的瓶颈层之后再不断经过卷积模块和上采样模块使数据还原为和输入相同的形状。每经过一层上采样，都会与先前下采样时留下的特征图合并，再经过后续的模块。这样的结构使得网络可以同时捕捉多尺度的信息，在后来的 DDPM 等一众扩散生成模型【】中，被用作噪声预测器。
+#h(2em) U-Net 最初由 Olaf Ronneberger 等人 #cite(<ronneberger2015unetconvolutionalnetworksbiomedical>) 于 2015 年提出，为的是解决 2D 医学影像分割任务，其得名于论文中的 U 形网络结构，如 #ref(<fig:2D-U-Net-Structure>) 所示。由图可见，U-Net 中有一些基本结构：$3 times 3$ 卷积和 $"ReLU"$ 组成的基本卷积模块、$1 times 1$ 卷积模块、复制剪贴模块 (copy and crop)、最大值池化下采样模块、以转置卷积为例的上采样模块。数据进入模型后，通过不断通过 $3 times 3$ 卷积模块和下采样模块，得到多种大小尺度的特征图。在经过 U-Net 最下一层的瓶颈层之后再不断经过卷积模块和上采样模块使数据还原为和输入相同的形状。每经过一层上采样，都会与先前下采样时留下的特征图合并，再经过后续的模块。这样的结构使得网络可以同时捕捉多尺度的信息，在后来的 DDPM #cite(<DBLP:paper-DDPM>) 等一众扩散生成模型中，被用作噪声预测器。
 
 #figure(
   image("/assets/image-14.png", width: 50%),
@@ -188,7 +186,7 @@ $
 
 === 3D U-Net
 
-#h(2em) 在面临 3D 医学影像分割任务时，虽然可以将其切分成若干层 2D 医学影像分别经过 U-Net 等模型做分割任务，但这样的方法破坏了影像在第三维度上的连续性，也无法利用这一特点进行高效准确的预测。为充分利用三维影像的这一特点，$dot.double("O")"zg"dot.double("u")"n"$ Çiçek等人【】提出了 *3D U-Net 模型*，如 #ref(<fig:3D-U-Net-Structure>) 所示。
+#h(2em) 在面临 3D 医学影像分割任务时，虽然可以将其切分成若干层 2D 医学影像分别经过 U-Net 等模型做分割任务，但这样的方法破坏了影像在第三维度上的连续性，也无法利用这一特点进行高效准确的预测。为充分利用三维影像的这一特点，$dot.double("O")"zg"dot.double("u")"n"$ Çiçek等人 #cite(<çiçek20163dunetlearningdense>) 提出了 *3D U-Net 模型*，如 #ref(<fig:3D-U-Net-Structure>) 所示。
 
 #figure(
   image("/assets/image-15.png", width: 50%),
@@ -200,7 +198,7 @@ $
 == 3D U-Net 的变体
 === 3D 残差 U-Net
 
-#h(2em)在此之后，Kisuk Lee 等人【】提出了*残差 3D U-Net 的架构*，并在 SNEMI3D
+#h(2em)在此之后，Kisuk Lee 等人 #cite(<lee2017superhumanaccuracysnemi3dconnectomics>) 提出了*残差 3D U-Net 的架构*，并在 SNEMI3D
 Connectomics 竞赛中超越人类专家水平。残差 3D-UNet 架构如 #ref(<fig:3D-Res-U-Net-Structure>) 所示，它将 3D-UNet 中每个尺度上的变换模块改为了由一个 $3 times 3 times 1$ 卷积、两个 $3 times 3 times 3$ 卷积和一个残差链接组成的残差卷积模块，使得反向传播的梯度流的衰减或扩大效应更弱。
 
 #figure(
@@ -210,7 +208,7 @@ Connectomics 竞赛中超越人类专家水平。残差 3D-UNet 架构如 #ref(<
 
 === 3D 残差 SE U-Net
 
-#h(2em) 以 3D 残差为基础，在每一个残差卷积块后添加一个*挤压刺激 (squeeze and excitation, SE) 模块*【】，就得到了 *3D 残差 SE U-Net*。SE 模块可被理解为某种“注意力”模块，它根据输入通过一个卷积层特征图计算空间网格和（或）通道的权重，最后和输入特征图做逐元素乘法，达到调整特征图各部分强度的目的。SE 一般有三种，通道 SE、空间 SE 和空间通道 SE，三者的具体结构如 #ref(<fig:SE-Block-Structure>) 所示。
+#h(2em) 以 3D 残差为基础，在每一个残差卷积块后添加一个*挤压刺激 (squeeze and excitation, SE) 模块* #cite(<lee2017superhumanaccuracysnemi3dconnectomics>) ，就得到了 *3D 残差 SE U-Net*。SE 模块可被理解为某种“注意力”模块，它根据输入通过一个卷积层特征图计算空间网格和（或）通道的权重，最后和输入特征图做逐元素乘法，达到调整特征图各部分强度的目的。SE 一般有三种，通道 SE、空间 SE 和空间通道 SE，三者的具体结构如 #ref(<fig:SE-Block-Structure>) 所示。
 
 #figure(
   image("/assets/image-17.png", width: 70%),
@@ -218,6 +216,15 @@ Connectomics 竞赛中超越人类专家水平。残差 3D-UNet 架构如 #ref(<
 )<fig:SE-Block-Structure>
 
 本项目将使用 3D U-Net、3D 残差 U-Net 和 3D 残差 SE U-Net 进行分割任务。
+
+=== 损失函数
+
+#h(2em) 本项目中同时采用正例权重为 `2` 的二值交叉熵损失 (binary cross entropy, BCE) 和 Dice 损失的和作为损失函数，其形式为
+$
+  L(theta) &= "BCE"(theta; 2) + "Dice"(theta; 2)\
+  "Dice"(theta; w) &= (2 dot.c w dot.c sum_(i=1)^N p_i g_i) / (sum_(i=1)^N p_i^2 + sum_(i=1)^N g_i^2)
+$
+其中 $p_i$ 是模型预测的第 $i$ 个体素的值，$g_i$ 是标签对应位置体素的值。
 
 = 训练优化
 
@@ -258,26 +265,30 @@ fib = lru_cache(maxsize=self.cache_max_size)(fib)
 
 但在本项目的情境下，为了读取一个小数据块而频繁地读取一个较大的数据文件（一般为几十到一两百 M）使得 LRU 缓存是一个提升效率的可选项。需要对其进行调整，笔者使用的 Windows 机器在设置 `Dataloader` 中的 `num_workers` 非零的情况下系统会创建子进程，相比于 Linux 或 Unix 系统，Windows 系统会使用 `spawn()` 模式启动新的 Python 解释器，并通过 pickle 序列化传递对象，这意味着主进程中的所有对象必须是可序列化的，否则解释器将会抛出 `PicklingError`，而如果使用 `lru_cache()` 装饰读取数据块的函数，得到的将会是不可序列化的对象。解决方法为不再直接使用 `lru_cache()` 装饰器，而是直接使用有序字典对象（`OrderedDict`）重新实现一个自定义带有 LRU 缓存的函数，同时注意键可哈希的要求。
 
-#pagebreak()
 = 实验与结论
 == 机器参数和训练超参数
 === 机器参数
 
-#h(2em) 本项目的训练过程中使用两台不同的机器。
-
-1 号机器配备AMD Ryzen 7 5800H with Radeon Graphics 3.20 GHz CPU、32.0 GB内存和NVIDIA RTX 3050Ti GPU（4 GB）；
-
-2 号机器配备 Intel(R) Xeon(R) Gold 6430 CPU、120 GB 内存和 NVIDIA GeForce RTX 4090 GPU (24 GB)。两个机器的环境和训练超参数一致。
+#h(2em) 本项目的训练过程中使用的机器配备AMD Ryzen 7 5800H with Radeon Graphics 3.20 GHz CPU、32.0 GB内存和NVIDIA RTX 3050Ti GPU（4 GB）。
 
 === 训练超参数
 
-#h(2em) 模型训练的超参数主要存储在 `*.yaml` 文件中，部分超参数以默认参数的形式显式地存储于 `*.py` 文件中。对于数据切分，我们设置窗口形状为 `[32, 128, 128]`, 采样步长为 `[16, 64, 64]`；由于
+#h(2em) 模型训练的超参数主要存储在 `*.yaml` 文件中，部分超参数以默认参数的形式显式地存储于 `*.py` 文件中。对于数据切分，我们设置窗口形状为 `[32, 128, 128]`, 采样步长为 `[16, 64, 64]`；由于目标的大小占比，接收阈值设置为 `0.0001`，对不满足阈值条件的切片接收概率为 `0.01`。
 
-=== 实验结果
+== 实验结果
 
-#h(2em) 本项目使用 
+#h(2em) 本项目使用 3D U-Net、3D 残差 U-Net 和 3D 残差 SE U-Net 在 MSD 肺癌数据集上进行训练。由于测试集没有标签，因此仅在有标签的训练集上训练，并将训练集再划分为训练集和验证集，其中训练集 $49$ 例，验证集 $14$ 例。模型在训练集上训练了 $10$ 轮次 (epochs)。
 
-#pagebreak()
+遗憾的是，上述三个模型在此分割任务中的表现都很低，也许是大部分目标肿瘤体积小，但肿瘤位置、分布不均；另外和窗口大小和机器算力限制和未使用最新的网络结构有关（`nn-UNet` 在截止至其论文发表时在该比赛中拔得头筹）。三个网络在验证集上的最高 Dice 分数分别为 $0.1040$、$0.0682$、$0.0542$，远低于预期标准。下图绘制了三个模型的训练损失和验证损失曲线。
+
+#figure(
+  image("/assets/image-19.png", width: 70%),
+  caption: [3D U-Net、3D 残差 U-Net 和 3D 残差 SE U-Net 在 MSD 肺癌数据集上的训练集损失函数曲线。]
+)<fig:learning_curve>
+
+== 结论和改进方向
+
+#h(2em) 深度学习模型在小目标异质 3D 分割任务上要达到优异性能存在相当的挑战。极不平衡的标签比例和过小的目标会严重影响模型学习到有效的知识。为解决上述目标，还可能尝试新的分割网络结构，例如和 Transformer 结合的网络结构和其他学习范式，例如迁移学习和元学习。前者通过在性质较好的训练集上训练，再尝试迁移到小目标、小样本分割数据集，并在其上做微调；或是采用其他的显式域对齐方法达到迁移效果；另外还可以采用元学习方法，同时对一批这样的小目标小样本数据集上，以学习和该域任务相关的元知识，例如初始化参数、网络结构等超参数。
 
 = 运行项目代码
 
@@ -329,4 +340,3 @@ source ./.venv/bin/activate
               style: "ieee", 
               full: true
 )
-
