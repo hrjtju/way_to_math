@@ -119,7 +119,7 @@
 #let qbk(n, k) = {[$q^(#n)_(#k|#k+1) (x_#k|x_(#k+1))$]}
 
 // metadata
-#let wk_report_name = "2025年12月15日至12月21日周报"
+#let wk_report_name = "2026年一月上旬工作汇报和寒假工作计划"
 #let name_affiliation = "何瑞杰 | 中山大学 & 大湾区大学"
 
 #set page(
@@ -139,11 +139,7 @@
 #linebreak()
 #grid(columns: (100%), align: center, text(size: 12pt)[速 览])
 
-#tab 本周大部分时间花在了阅读 #schrodinger 桥论文#cite(<debortoli2023diffusionschrodingerbridgeapplications>)，它给出了一个以 #schrodinger 桥问题观察生成模型的视角。一般的薛定谔桥问题（或静态薛定谔桥问题）没有闭式解，作者转而通过修改 IPF 算法使之适配分数匹配生成模型的框架，并采用迭代的方式学习薛定谔桥。
-
-在生命游戏项目方面，本周实现了一个极小的朴素规则提取函数，在 `B3678/S34678` 数据集上可以成功提取规则。
-
-最后本周学习了 Stein 实分析中开篇的少量内容。
+#tab 
 
 #pagebreak()
 
@@ -151,8 +147,6 @@
 == 使用神经网络学习生命游戏的演化动力学
 #tab 
 
-#image("stats_out-B36_S23-0007.svg")
-#image("stats_out-B36_S23-0008.svg")
 
 
 将统计用数据序列添加扰动：
@@ -190,29 +184,29 @@ $
 
 #tab 相比于一般的扩散模型，隐扩散模型工作在 VAE 等带有瓶颈结构的潜在空间中。其特点为相比直接在图像空间 (pixel space) 中运行扩散模型，隐空间维数远小于图像空间，这样可以显著降低计算开销和推理时间。注意 LDM 的工作空间只是从图像空间改为隐空间，因此扩散模型范畴内的方法，如 DDPM、DDIM、无类引导等方法均可挪用在 LDM 上。
 
-#figure(
-  image("ldm_framework.png", width: 64%),
-  caption: [隐扩散模型的架构#cite(<GithubOfficial:LDM>)]
-)
+// #figure(
+//   image("ldm_framework.png", width: 64%),
+//   caption: [隐扩散模型的架构#cite(<GithubOfficial:LDM>)]
+// )
 
 === 视觉 Transformer (Vision Transformer, ViT)
 
 #tab 视觉 Transformer 是将先前在自然语言处理 (natural language processing, NLP) 中大放异彩的 Transformer 架构引入计算机视觉 (Computer vision, CV) 领域的一次成功尝试。Transformer 架构的核心为注意力机制 (attention mechanism)，其本质为对加上位置编码的序列每项计算得到的键-值对进行匹配，其匹配方式是做内积，然后以此确定其他项相对于某一项的权重。换言之，注意力机制赋予序列中的每项不同的注意力，这是源于自然语言中词元 (token)（组）之间的依赖关系，例如代词往往指示的是一个也许在千里之外的另一个名词。
 
 现在将视线从 NLP 转向 CV，ViT 的核心思想是在图像中构造视觉 token，其方法为将图片按照网格划分为若干小块 (patch)，然后将这些小块经过映射后作为对应于该输入图像的视觉 token，最后输入 Transformer 模块。ViT 继承了 Transformer 的有点，具有可拓展性、高并行度、可优化、全局感受野等优点。
-#figure(
-  image("vit_framework.png", width: 64%),
-  caption: [视觉 Transformer 的架构#cite(<DBLP:ViT>)]
-)
+// #figure(
+//   image("vit_framework.png", width: 64%),
+//   caption: [视觉 Transformer 的架构#cite(<DBLP:ViT>)]
+// )
 
 === 扩散 Transformer (Diffusion Transformer, DiT)
 
 #tab DiT 可以说是融合了 ViT 和 LDM 这两个框架，或者说 DiT 是将 LDM 中主干换成 ViT 后的产物。为适配条件生成等任务，需要在模型中引入一个时间标志 $t$ 和一个类别标志 $c$。其中前者是将标量时间映射后的时间向量，后者可以是离散的标签，或文生图中对应生成提示词 (prompt) 的嵌入向量 (embedding vector)。作者提出了三种 DiT 模块
 
-#figure(
-  image("DiT_block.png", width: 80%),
-  caption: [隐扩散模型的架构#cite(<GithubOfficial:LDM>)]
-)
+// #figure(
+//   image("DiT_block.png", width: 80%),
+//   caption: [隐扩散模型的架构#cite(<GithubOfficial:LDM>)]
+// )
 
 + *上下文条件（In-context conditioning）*： 将时间标志和类别标志作为两个额外的 token 附加到输入序列中，与图像 token 平等。
 + *交叉注意力块（Cross-attention）*： 将时间标志和类别标志连接成一个短的序列，与图像 token 序列分开，并在中间的交叉注意力模块中进入。
@@ -444,7 +438,7 @@ $
 
 // #pagebreak()
 
-= 下周计划
+= 一月上旬工作计划
 *论文阅读*
 + 生成模型
   - 薛定谔桥
@@ -474,7 +468,7 @@ $
 
 #set text(lang: "en")
 
-#bibliography("refs.bib",   // 你的 BibTeX 文件
+#bibliography("../refs.bib",   // 你的 BibTeX 文件
               title: "参考文献",
               style: "ieee", 
               full: false
