@@ -823,7 +823,7 @@ class AbstractUNet(nn.Module):
         is_segmentation=True,
         conv_kernel_size=3,
         pool_kernel_size=2,
-        conv_padding=1,
+        conv_padding=2,
         conv_upscale=2,
         upsample="default",
         dropout_prob=0.1,

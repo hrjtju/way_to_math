@@ -65,13 +65,50 @@ class SegTrainer:
         # add neural network
         self.network: NNModel = get_model(self.cfg["model"])
         self.network = self.network.to(self.device)
+        # optional weight initialization and deterministic seed
+        def _init_weights(m):
+            # Convs
+            if isinstance(m, (torch.nn.Conv2d, torch.nn.Conv3d, torch.nn.ConvTranspose3d)):
+                try:
+                    torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                except Exception:
+                    pass
+                if getattr(m, 'bias', None) is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+            # Linear
+            elif isinstance(m, torch.nn.Linear):
+                try:
+                    torch.nn.init.xavier_normal_(m.weight)
+                except Exception:
+                    pass
+                if getattr(m, 'bias', None) is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+            # Batch/Instance/GroupNorm
+            elif isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d, torch.nn.BatchNorm3d,
+                                torch.nn.InstanceNorm1d, torch.nn.InstanceNorm2d, torch.nn.InstanceNorm3d,
+                                torch.nn.GroupNorm)):
+                if getattr(m, 'weight', None) is not None:
+                    torch.nn.init.constant_(m.weight, 1)
+                if getattr(m, 'bias', None) is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+
+        init_flag = self.cfg.get('training', {}).get('init_weights', True)
+        if init_flag:
+            seed = self.cfg.get('training', {}).get('seed', 42)
+            if seed is not None:
+                import numpy as _np
+                torch.manual_seed(seed)
+                _np.random.seed(seed)
+                if torch.cuda.is_available():
+                    torch.cuda.manual_seed_all(seed)
+            self.network.apply(_init_weights)
+            print("Applied weight initialization and seed" if seed is not None else "Applied weight initialization")
+            
         print(f"Network Params: {sum(p.numel() for p in self.network.parameters()):,}")
     
         self.optimizer: torch.optim.Optimizer = torch.optim.AdamW(**self.cfg["optimizer"], params=self.network.parameters())
     
         self.scheduler: torch.optim.lr_scheduler.LRScheduler = getattr(torch.optim.lr_scheduler, self.cfg["lr_scheduler"]["name"])(**filter_name(self.cfg["lr_scheduler"]), optimizer = self.optimizer) 
-
-        
         
         self.loss_fn = getattr(losses, self.cfg["loss"]["name"])(**filter_name(self.cfg["loss"]))
 
@@ -85,13 +122,28 @@ class SegTrainer:
         self.dataset_train: Dataset = getattr(datasets, self.dataset_cfg["name"])(**filter_name(self.dataset_cfg), 
                                                                          mode="train", 
                                                                          transform=self.transforms["train"],
-                                                                         slice_builder_config=self.loaders_cfg["train"]["slice_builder"])
+                                                                         slice_builder_config=self.loaders_cfg["train"]["slice_builder"]
+                                                                         )
         self.dataset_val: Dataset = getattr(datasets, self.dataset_cfg["name"])(**filter_name(self.dataset_cfg), 
                                                                          mode="val", 
                                                                          transform=self.transforms["val"],
-                                                                         slice_builder_config=self.loaders_cfg["train"]["slice_builder"])
-        self.dataloader_train = DataLoader(self.dataset_train, batch_size=self.loaders_cfg["batch_size"], shuffle=True)
-        self.dataloader_val = DataLoader(self.dataset_val, batch_size=4 * self.loaders_cfg["batch_size"], shuffle=False)
+                                                                         slice_builder_config=self.loaders_cfg["train"]["slice_builder"]
+                                                                         )
+        
+        self.dataloader_train = DataLoader(self.dataset_train, 
+                                           batch_size=self.loaders_cfg["batch_size"], 
+                                           shuffle=True,
+                                           pin_memory=True, 
+                                           num_workers=self.loaders_cfg["num_workers"], 
+                                           persistent_workers=True,
+                                           prefetch_factor=self.loaders_cfg["num_workers"]//2)
+        
+        self.dataloader_val = DataLoader(self.dataset_val, 
+                                           batch_size=2 * self.loaders_cfg["batch_size"], 
+                                           shuffle=False,
+                                           pin_memory=True, 
+                                           num_workers=self.loaders_cfg["num_workers"]//2, 
+                                           prefetch_factor=self.loaders_cfg["num_workers"]//4)
         
     def get_transform(self, cfg: dict):
         """
@@ -102,6 +154,7 @@ class SegTrainer:
         
         for (k,v) in cfg.items():
             transforms_ls = []
+            
             for tr in v:
                 if len(tr) == 1:
                     transforms_ls.append(
@@ -122,40 +175,61 @@ class SegTrainer:
         self.network.train()
         metrics = defaultdict(list)
         
-        pbar = tqdm(self.dataloader_train, desc=f"Train Epoch {self.epoch}")
-        for batch in pbar:
+        pbar = tqdm(enumerate(self.dataloader_train), desc=f"Train Epoch {self.epoch}",
+                    total=len(iter(self.dataloader_train)))
+        
+        # loss_sum = 0
+        # 
+        for idx, batch in pbar:
             # move training data and label to device
             image = batch[0].to(self.device, dtype=torch.float32)  # (B, 1, D, H, W)
-            target = batch[1].to(self.device, dtype=torch.float32)    # (B, D, H, W)
+            # image = batch[0].to(self.device, dtype=torch.float32)  # (B, 1, D, H, W)
+            target = self.soft(batch[1].to(self.device, dtype=torch.float32))    # (B, D, H, W)
             
-            target, target_border = target[:, :1, ...], target[:, 1:, ...]
+            target, _ = target[:, :1, ...], target[:, 1:, ...]
             
             # prediction
             self.optimizer.zero_grad()
             
             with torch.autocast(device_type="cuda"):
                 pred, logits = self.network(image, return_logits=True)  # output shape same as input
-            
+
+                # print(pred.max().item(), pred.min().item(), logits.max().item(), logits.min().item())
                 # compute loss
-                loss = self.loss_fn(logits, target)
-        
+                loss, bce, dice = self.loss_fn(pred, logits, target)
+
+            # loss_sum += loss.detach()
             # backward pass
-            scalar.scale(loss).backward()
+            loss.backward()
+            
             if 'grad_clip' in self.cfg['training']:
                 torch.nn.utils.clip_grad_norm_(
                     self.network.parameters(), 
                     self.cfg['training']['grad_clip']
                 )
-            scalar.step(self.optimizer)
-            scalar.update()
+                
+            self.optimizer.step()
             
-            # 指标
-            metrics['loss'].append(loss.item())
+            # show mean loss to reduce number of .item() calls
+            metrics['loss'].append(loss.detach().item())
             
-            pbar.set_postfix({'loss': f"{loss.item():.3f}"})
+            # calculate gradient norm
+            grad_norm_sum = sum(p.grad.norm() for p in self.network.parameters() if p.grad is not None)
+            
+            pbar.set_postfix({
+                                'total_loss': f"{loss.detach().item():.3f}",
+                                'bce': f"{bce.detach().item():.3f}",
+                                'dice': f"{dice.detach().item():.3f}",
+                                'grad_norm': f"{grad_norm_sum.detach().item():.3f}"
+                            })
+            
         
         return {k: np.mean(v) for k, v in metrics.items()}
     
+    def soft(self, l, e=1e-2):
+        return torch.clamp(l, e, 1-e)
+    
+    @torch.no_grad()
     def validate(self) -> Dict[str, float]:
         """
         test or validate on validation set
@@ -165,9 +239,11 @@ class SegTrainer:
         
         with torch.no_grad():
             pbar = tqdm(self.dataloader_val, desc=f"Val Epoch {self.epoch}")
+            
             for batch in pbar:
                 image = batch[0].to(self.device, dtype=torch.float32)
-                target = batch[1].to(self.device, dtype=torch.float32)
+                # image = batch[0].to(self.device, dtype=torch.float32)
+                target = self.soft(batch[1].to(self.device, dtype=torch.float32))
                 
                 target, target_border = target[:, :1, ...], target[:, 1:, ...]
                 
@@ -176,10 +252,18 @@ class SegTrainer:
                     pred, logits = self.network(image, return_logits=True)
                     
                     # compute loss
-                    loss = self.loss_fn(logits, target)
-                    
-                metrics['loss'].append(loss.item())
-                pbar.set_postfix({'loss': f"{loss.item():.3f}"})
+                    loss, bce, dice = self.loss_fn(pred, logits, target)
+                
+                assert torch.isnan(loss).sum() == 0, print(loss, pred, logits, target, sep='\n', flush=True)
+                 
+                metrics['val_loss'].append(loss.item())
+                metrics['val_dice'].append(dice.item())
+                pbar.set_postfix(
+                    {
+                        'val_loss': f"{loss.item():.3f}", 
+                        'val_dice': f"{dice.item():.3f}"
+                    }
+                )
         
         return {k: np.mean(v) for k, v in metrics.items()}
     
@@ -198,15 +282,16 @@ class SegTrainer:
             self.epoch = epoch
             
             # train ONE epoch
-            # train_metrics = self.train_epoch(scaler)
-            train_metrics = 0
+            train_metrics = self.train_epoch(scaler)
+            # train_metrics = {"loss": 0}
             
             # validation
             val_metrics = self.validate()
+            # val_metrics = {"val_loss": 0}
             
             # update LR scheduler
             if self.scheduler:
-                self.scheduler.step(val_metrics)
+                self.scheduler.step(val_metrics['val_loss'])
             
             # add logging info
             self._log_metrics({**train_metrics, 
@@ -214,12 +299,11 @@ class SegTrainer:
                                })
             
             # save checkpoints
-            self._save_checkpoint(train_metrics)
+            self._save_checkpoint(val_metrics)
             
             # Early stopping
-            if self._check_early_stopping(train_metrics):
+            if self._check_early_stopping(val_metrics):
                 print(f"Early stopping triggered at epoch {epoch}")
-                break
     
     def _log_metrics(self, metrics: Dict[str, float]):
         """
@@ -227,7 +311,7 @@ class SegTrainer:
         """
         print(f"Epoch {self.epoch}: " + 
               f"Train Loss: {metrics['loss']:.4f}, " +
-              f"Val Loss: {metrics['dice']:.4f}")
+              f"Val Loss: {metrics['val_loss']:.4f}")
         
         if self.cfg['logging']['use_wandb']:
             wandb.log(metrics, step=self.epoch)
@@ -236,7 +320,7 @@ class SegTrainer:
         """
         save latest & best model
         """
-        current_dice = val_metrics['dice']
+        current_dice = 1 - val_metrics['val_dice'] * 5 / 4
         
         # save latest
         torch.save({
@@ -279,9 +363,21 @@ class SegTrainer:
 
 
 if __name__ == "__main__":
+    from pyinstrument import Profiler
+    
+    torch.random.manual_seed(42)
+    
+    profiler = Profiler()
+    profiler.start()
+    
     trainer = SegTrainer(r"D:\Research\Mathematics\SYSU_GBU\6_Lectures\0_MachineLearning\2_Final_homework\2_code\3d_unet_cfg.yaml")
     print(trainer.transforms)
     
     trainer.fit()
+    
+    profiler.stop()
+    
+    with open('profile.html', 'w') as f: 
+        f.write(profiler.output_html())
     
     # self.dataloader_train = torch.utils.data.DataLoader()

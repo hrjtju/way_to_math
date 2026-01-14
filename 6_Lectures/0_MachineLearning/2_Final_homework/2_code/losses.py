@@ -1,3 +1,4 @@
+from numpy import positive
 import torch
 import torch.nn.functional as F
 from torch import nn as nn
@@ -119,7 +120,7 @@ class _AbstractDiceLoss(nn.Module):
         per_channel_dice = self.dice(input, target, weight=self.weight)
 
         # average Dice score across all channels/classes
-        return 1.0 - torch.mean(per_channel_dice)
+        return (self.weight - torch.mean(per_channel_dice)) / self.weight
 
 
 class DiceLoss(_AbstractDiceLoss):
@@ -152,17 +153,17 @@ class GeneralizedDiceLoss(_AbstractDiceLoss):
         super().__init__(weight=None, normalization=normalization)
         self.epsilon = epsilon
 
-    def dice(self, input, target, weight):
-        assert input.size() == target.size(), "'input' and 'target' must have the same shape"
+    def dice(self, inp, target, weight):
+        assert inp.size() == target.size(), "'input' and 'target' must have the same shape"
 
-        input = flatten(input)
+        inp = flatten(inp)
         target = flatten(target)
         target = target.float()
 
-        if input.size(0) == 1:
+        if inp.size(0) == 1:
             # for GDL to make sense we need at least 2 channels (see https://arxiv.org/pdf/1707.03237.pdf)
             # put foreground and background voxels in separate channels
-            input = torch.cat((input, 1 - input), dim=0)
+            inp = torch.cat((inp, 1 - inp), dim=0)
             target = torch.cat((target, 1 - target), dim=0)
 
         # GDL weighting: the contribution of each label is corrected by the inverse of its volume
@@ -170,12 +171,12 @@ class GeneralizedDiceLoss(_AbstractDiceLoss):
         w_l = 1 / (w_l * w_l).clamp(min=self.epsilon)
         w_l.requires_grad = False
 
-        intersect = (input * target).sum(-1)
+        intersect = (inp * target).sum(-1)
         intersect = intersect * w_l
 
-        denominator = (input + target).sum(-1)
+        denominator = (inp + target).sum(-1)
         denominator = (denominator * w_l).clamp(min=self.epsilon)
-
+        
         return 2 * (intersect.sum() / denominator.sum())
 
 
@@ -189,11 +190,14 @@ class BCEDiceLoss(nn.Module):
     def __init__(self, alpha=1.0):
         super().__init__()
         self.alpha = alpha
-        self.bce = nn.BCEWithLogitsLoss()
-        self.dice = DiceLoss()
+        self.bce = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(2))
+        self.dice = DiceLoss(weight=torch.tensor(2), normalization="none")
 
-    def forward(self, input, target):
-        return self.bce(input, target) + self.alpha * self.dice(input, target)
+    def forward(self, inp, logits, target):
+        bce = self.bce(logits, target)
+        dice = self.dice(inp, target)
+        # print(bce.item(), dice.item())
+        return bce + self.alpha * dice, bce, dice
 
 
 class WeightedCrossEntropyLoss(nn.Module):

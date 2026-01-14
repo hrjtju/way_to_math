@@ -4,6 +4,7 @@ logging:
 
 model:
   name: UNet3D
+  # name: UNet3D
   # number of input channels to the model
   in_channels: 1
   # number of output channels
@@ -11,14 +12,15 @@ model:
   # determines the order of operators in a single layer (crg - Conv3d+ReLU+GroupNorm)
   layer_order: gcl
   # initial number of feature maps
-  f_maps: 16
+  f_maps: 24
   # number of groups in the groupnorm
-  num_groups: 4
+  num_groups: 3
   # apply element-wise nn.Sigmoid after the final 1x1x1 convolution, otherwise apply nn.Softmax
   final_sigmoid: true
 # loss function to be used during training
 loss:
   name: BCEDiceLoss
+  alpha: 1
   # a target value that is ignored and does not contribute to the input gradient
   # ignore_index: null
   # skip the last channel in the target (i.e. when last channel contains data not relevant for the loss)
@@ -27,17 +29,7 @@ optimizer:
   # initial learning rate
   lr: 0.0002
   # weight decay
-  weight_decay: 0.00001
-# evaluation metric
-eval_metric:
-  # use AdaptedRandError metric
-  name: BoundaryAdaptedRandError
-  # probability maps threshold
-  threshold: 0.4
-  # use the last target channel to compute the metric
-  use_last_target: true
-  # use only the first channel for computing the metric
-  use_first_input: true
+  weight_decay: 0.000001
 lr_scheduler:
   name: ReduceLROnPlateau
   # make sure to use the 'min' mode cause lower AdaptedRandError is better
@@ -45,7 +37,7 @@ lr_scheduler:
   factor: 0.5
   patience: 30
 training:
-  grad_clip: 12
+  grad_clip: 100
   # model with lower eval score is considered better
   eval_score_higher_is_better: False
   # path to the checkpoint directory
@@ -57,7 +49,7 @@ training:
   # how many iterations between tensorboard logging
   log_after_iters: 50
   # max number of epochs
-  max_num_epochs: 10
+  max_num_epochs: 50
 # Configure training and validation loaders
 loaders:
   # 
@@ -67,7 +59,7 @@ loaders:
     json_path: E:\2_Project_Data\3_SYSU_MLLecture_final_medical_segmentation_lung_ca\0_original\Task06_Lung_hdf5\dataset.json
   # how many subprocesses to use for data loading
   # set it to ZERO if you're on WINDOWS platform
-  num_workers: 0
+  num_workers: 4
   batch_size: 2
   # path to the raw data within the H5
   raw_internal_path: raw
@@ -89,11 +81,11 @@ loaders:
     slice_builder:
       name: FilterSliceBuilder
       # train patch size given to the network (adapt to fit in your GPU mem, generally the bigger patch the better)
-      patch_shape: [60, 120, 120]
+      patch_shape: [32, 128, 128]
       # train stride between patches
-      stride_shape: [40, 80, 80]
+      stride_shape: [16, 64, 64]
       # minimum volume of the labels in the patch
-      threshold: 0.6
+      threshold: 0.0001
       # probability of accepting patches which do not fulfil the threshold criterion
       slack_acceptance: 0.01
 
@@ -109,12 +101,6 @@ loaders:
           mode: reflect
         - name: ElasticDeformation
           spline_order: 3
-        - name: GaussianBlur3D
-          execution_probability: 0.5
-        - name: AdditiveGaussianNoise
-          execution_probability: 0.2
-        - name: AdditivePoissonNoise
-          execution_probability: 0.2
         - name: ToTensor
           expand_dims: true
       label:
@@ -143,11 +129,11 @@ loaders:
     slice_builder:
       name: FilterSliceBuilder
       # train patch size given to the network (adapt to fit in your GPU mem, generally the bigger patch the better)
-      patch_shape: [80, 170, 170]
+      patch_shape: [32, 128, 128]
       # train stride between patches
-      stride_shape: [80, 170, 170]
+      stride_shape: [16, 64, 64]
       # minimum volume of the labels in the patch
-      threshold: 0.6
+      threshold: 0.0001
       # probability of accepting patches which do not fulfil the threshold criterion
       slack_acceptance: 0.01
 

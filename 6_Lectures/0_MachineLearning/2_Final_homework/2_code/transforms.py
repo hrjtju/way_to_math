@@ -663,29 +663,12 @@ class Standardize:
     """
 
     def __init__(self, eps: float = 1e-10, mean: float = None, std: float = None, channelwise: bool = False, **kwargs):
-        if mean is not None or std is not None:
-            assert mean is not None and std is not None
-        self.mean = mean
-        self.std = std
-        self.eps = eps
-        self.channelwise = channelwise
+        self.min = -600
+        self.max = 1500
 
     def __call__(self, m: np.ndarray) -> np.ndarray:
-        if self.mean is not None:
-            mean, std = self.mean, self.std
-        else:
-            if self.channelwise:
-                # normalize per-channel
-                axes = list(range(m.ndim))
-                # average across channels
-                axes = tuple(axes[1:])
-                mean = np.mean(m, axis=axes, keepdims=True)
-                std = np.std(m, axis=axes, keepdims=True)
-            else:
-                mean = np.mean(m)
-                std = np.std(m)
 
-        return (m - mean) / np.clip(std, a_min=self.eps, a_max=None)
+        return (m - self.min) / (self.max - self.min) * 2 - 1
 
 
 class PercentileNormalizer:

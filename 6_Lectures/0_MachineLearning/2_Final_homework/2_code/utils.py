@@ -174,6 +174,7 @@ class FilterSliceBuilder(SliceBuilder):
                 patch[patch == ignore_index] = 0
             non_ignore_counts = np.count_nonzero(patch != 0)
             non_ignore_counts = non_ignore_counts / patch.size
+            
             return non_ignore_counts > threshold or rand_state.rand() < slack_acceptance
 
         zipped_slices = zip(self.raw_slices, self.label_slices, strict=True)
