@@ -5,6 +5,7 @@ from collections import namedtuple
 from typing import Callable, List, Tuple, Optional
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from tqdm import tqdm
 
 plt.rcParams['font.family'] = list({"SimHei", "Heiti TC"} & set(f.name for f in mpl.font_manager.fontManager.ttflist))[0]
 
@@ -28,7 +29,7 @@ class ControlledMM1Queue:
                  max_customers: int = None):
         """
         参数：
-        - arrival_rate: λ (泊松到达速率)
+        - arrival_rate: λ (到达速率)
         - service_rate_policy: μ(i) -> float，从状态到服务速率的映射
         - service_cost_func: q(μ) -> float，单位时间服务代价
         - queue_cost_func: c(i) -> float，单位时间排队代价
@@ -160,7 +161,6 @@ class ControlledMM1Queue:
         """
         self.reset()
         
-        # 初始化第一个到达事件
         self._schedule_arrival()
         
         # 主事件循环
@@ -179,6 +179,8 @@ class ControlledMM1Queue:
                 self._handle_arrival()
             elif event.type == 'departure':
                 self._handle_departure()
+            
+            print(f"Simulating... {self.current_time/T*100:.2f}", end='\r')
         
         # 最后更新
         self.current_time = T

@@ -65,7 +65,7 @@ class CTMDPValueIterationSolver:
         - policy: 最优确定性策略
         """
         # 初始化值函数
-        J = np.zeros(self.max_state + 2)  # 多一个状态用于边界
+        J = np.zeros(self.max_state + 1)  # 多一个状态用于边界
         policy = np.zeros(self.max_state + 1)
         
         pb = tqdm(range(max_iter))
@@ -79,6 +79,19 @@ class CTMDPValueIterationSolver:
                     J_new[i] = (self._c_vec[i] + 
                                 (self.V - self.lambda_rate) * J[i] + 
                                 self.lambda_rate * J[i+1]) / (self.beta + self.V)
+                elif i == self.max_state:
+                    # 核心更新: min_μ [c(i) + q(μ) + μJ(i-1) + (V-λ-μ)J(i) + λJ(i+1)]
+                    
+                    policy[i] = self.mu_space[
+                        np.argmin(self._q_vec - self.mu_space * (J[i] - J[i-1]))
+                    ]
+                    
+                    # 对每个μ计算右边表达式
+                    rhs_values = self._c_vec[i] + self._q_vec + self.mu_space * J[i-1] \
+                                + (self.V - self.mu_space) * J[i]
+                    
+                    # 选择使右边最小的μ
+                    J_new[i] = np.min(rhs_values) / (self.beta + self.V)
                 else:
                     # 核心更新: min_μ [c(i) + q(μ) + μJ(i-1) + (V-λ-μ)J(i) + λJ(i+1)]
                     
@@ -93,10 +106,6 @@ class CTMDPValueIterationSolver:
                     
                     # 选择使右边最小的μ
                     J_new[i] = np.min(rhs_values) / (self.beta + self.V)
-                    
-            
-            # 边界条件: J(max_state+1) = J(max_state)
-            J_new[self.max_state + 1] = J_new[self.max_state]
             
             # 检查收敛 (使用无穷范数)
             diff = np.max(np.abs(J_new - J))
@@ -333,8 +342,10 @@ if __name__ == "__main__":
     
     # 运行值迭代
     print(f"开始标准值迭代（β={BETA}）...")
-    # J_optimal, policy_optimal = solver.value_iteration()
-    J_optimal, policy_optimal = solver.policy_iteration()
+    J_optimal, policy_optimal = solver.value_iteration()
+    # J_optimal, policy_optimal = solver.policy_iteration()
+    
+    print(J_optimal[0] * BETA)
     
     # 显示结果
     solver.print_results(J_optimal, policy_optimal)
@@ -347,3 +358,20 @@ if __name__ == "__main__":
     np.savez('discounted_optimal_policy.npz', 
              J=J_optimal, policy=policy_optimal,
              lambda_rate=LAMBDA, beta=BETA, max_state=MAX_STATE)
+    
+    from main import ControlledMM1Queue
+    
+    def service_rate_policy(i: int) -> float:
+        """从状态到服务速率的映射"""
+        return policy_optimal[i]
+    
+    queue = ControlledMM1Queue(
+        arrival_rate=LAMBDA, 
+        service_rate_policy=service_rate_policy,
+        service_cost_func=q_func,
+        queue_cost_func=c_func,
+        max_customers=MAX_STATE
+    )
+    
+    queue.run(T=1e7)
+    print(queue.get_average_cost(T=1e7))
