@@ -48,7 +48,7 @@ class CTMDPValueIterationSolver:
             raise ValueError("μ_space 必须包含 0（关闭服务的选项）")
         
         # 预计算代价向量
-        self._c_vec = np.array([c_func(i) for i in range(max_state + 2)])
+        self._c_vec = np.array([c_func(i) for i in range(max_state + 1)])
         self._q_vec = np.array([q_func(mu) for mu in self.mu_space])
         
     def value_iteration(self, 
@@ -125,63 +125,65 @@ class CTMDPValueIterationSolver:
         
         return J[:self.max_state+1], policy
     
-    def policy_iteration(self, tolerance: float = 1e-6, 
-                       max_iter: int = 20000) -> tuple:
-        # 1. 初始化策略 (从空间中选一个固定的 mu)
-        # policy 始终为 0，因为状态 0 不可控 [4]
-        policy = np.full(self.max_state + 1, self.mu_space[-1])
+    def policy_iteration(self, max_iter: int = 200000) -> tuple:
+        M = self.max_state  # 假设 M = 1000
+        num_states = M + 1   # 总状态数为 1001
         
-        J = np.zeros(self.max_state + 1)
+        # 1. 初始化策略与值函数
+        policy = np.full(num_states, self.mu_space[0])
+        J = np.zeros(num_states)
 
         for iteration in range(max_iter):
-            # --- 步骤一：策略评估 (解线性方程组 Ax = B) ---
-            # 构造三对角矩阵 A 的数据
-            main_diag = np.zeros(self.max_state + 1)
-            upper_diag = np.zeros(self.max_state)
-            lower_diag = np.zeros(self.max_state)
-            B = np.zeros(self.max_state + 1)
+            # --- 步骤一：策略评估 (解 Ax = B) ---
+            # 显式指定维度为 num_states (1001)
+            main_diag = np.zeros(num_states)
+            upper_diag = np.zeros(num_states - 1)
+            lower_diag = np.zeros(num_states - 1)
+            B = np.zeros(num_states) 
 
-            # 状态 0 的方程 [4]
+            # 状态 0：(beta + lambda)J(0) - lambda J(1) = c(0)
             main_diag[:] = self.beta + self.lambda_rate
+            
+            # 上对角线全部都是 -lambda
             upper_diag[:] = -self.lambda_rate
-            B = self._c_vec
+            B = self._c_vec # 确保只取前 num_states 个
 
-            # 状态 1 到 max_state-1 的方程 [4]
-            for i in range(1, self.max_state):
+            # 状态 1 <= i < M 的方程
+            for i in range(1, M+1):
                 mu_i = policy[i]
                 lower_diag[i-1] = -mu_i
-                main_diag[i] = self.beta + self.lambda_rate + mu_i
-                upper_diag[i] = -self.lambda_rate
+                main_diag[i] += mu_i
                 B[i] = self._c_vec[i] + self.q_func(mu_i)
+                
+                if i == M:
+                    main_diag[i] -= self.lambda_rate
 
-            # 边界状态 max_state (假设 J[N+1] = J[N])
-            main_diag[self.max_state] = self.beta + policy[self.max_state] # 简化处理
-            lower_diag[-1] = -policy[self.max_state]
-            B[self.max_state] = self._c_vec[self.max_state] + self.q_func(policy[self.max_state])
-
-            # 解 A*J = B
+            # 构造三对角矩阵并求解
+            from scipy.sparse import diags
+            from scipy.sparse.linalg import spsolve
             A = diags([lower_diag, main_diag, upper_diag], [-1, 0, 1], format='csc')
+            
+            # 此时 A 为 (1001, 1001), B 为 (1001,)，维度匹配
             J_new = spsolve(A, B)
 
             # --- 步骤二：策略改进 ---
             new_policy = np.zeros_like(policy)
-            for i in range(1, self.max_state + 1):
-                # 根据 Lec4 [5] 的公式提取最优 mu
-                # mu* = argmin [ q(mu) - mu * (J(i) - J(i-1)) ]
+            for i in range(1, num_states):
                 diff_J = J_new[i] - J_new[i-1]
                 idx = np.argmin(self._q_vec - self.mu_space * diff_J)
                 new_policy[i] = self.mu_space[idx]
             
-            # --- 步骤三：终止检查 ---
-            if np.array_equal(new_policy, policy):
-                print(f"策略迭代在第 {iteration} 次收敛")
+            # 检查收敛
+            if np.array_equal(new_policy, policy) or np.linalg.norm(J_new - J) < 1e-5:
+                print(f"✓ 策略迭代在第 {iteration} 次收敛")
                 break
-            
             policy = new_policy
-            J = J_new
+            
+            print("J diff: ", np.linalg.norm(J_new - J))
+            
+            J = J_new.copy()
 
         return J, policy
-        
     
     def get_greedy_policy(self, J: np.ndarray) -> np.ndarray:
         """
@@ -315,7 +317,7 @@ class CTMDPValueIterationSolver:
 if __name__ == "__main__":
     # 参数配置
     LAMBDA = 2.0
-    MAX_STATE = 1000
+    MAX_STATE = 10
     BETA = 0.1  # 折扣因子
     
     # 代价函数
@@ -328,7 +330,7 @@ if __name__ == "__main__":
         return 0.5 * mu ** 2
     
     # 服务速率空间
-    mu_space = np.linspace(0, 100, 20)  # 0.0 到 10.0
+    mu_space = np.linspace(0, 10, 20)  # 0.0 到 10.0
     
     # 创建求解器
     solver = CTMDPValueIterationSolver(
@@ -342,17 +344,13 @@ if __name__ == "__main__":
     
     # 运行值迭代
     print(f"开始标准值迭代（β={BETA}）...")
-    J_optimal, policy_optimal = solver.value_iteration()
-    # J_optimal, policy_optimal = solver.policy_iteration()
+    # J_optimal, policy_optimal = solver.value_iteration()
+    J_optimal, policy_optimal = solver.policy_iteration()
     
     print(J_optimal[0] * BETA)
     
-    # 显示结果
-    solver.print_results(J_optimal, policy_optimal)
-    
-    # 可视化
-    fig = solver.plot_policy_and_value(J_optimal, policy_optimal)
-    plt.show()
+    # # 显示结果
+    # solver.print_results(J_optimal, policy_optimal)
     
     # 保存结果
     np.savez('discounted_optimal_policy.npz', 
@@ -373,5 +371,5 @@ if __name__ == "__main__":
         max_customers=MAX_STATE
     )
     
-    queue.run(T=1e7)
-    print(queue.get_average_cost(T=1e7))
+    queue.run(T=1e6)
+    print(queue.get_average_cost(T=1e6))
