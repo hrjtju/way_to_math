@@ -347,29 +347,14 @@ if __name__ == "__main__":
     # J_optimal, policy_optimal = solver.value_iteration()
     J_optimal, policy_optimal = solver.policy_iteration()
     
-    print(J_optimal[0] * BETA)
+    # 比较结果
+    print(f"\n值迭代与策略迭代差异:")
+    print(f"J diff: {np.max(np.abs(J_vi - J_pi)):.8f}")
+    print(f"policy diff: {np.max(np.abs(policy_vi - policy_pi)):.8f}")
     
-    # # 显示结果
-    # solver.print_results(J_optimal, policy_optimal)
+    # 显示结果
+    solver.print_results(J_pi, policy_pi)
     
-    # 保存结果
-    np.savez('discounted_optimal_policy.npz', 
-             J=J_optimal, policy=policy_optimal,
-             lambda_rate=LAMBDA, beta=BETA, max_state=MAX_STATE)
-    
-    from main import ControlledMM1Queue
-    
-    def service_rate_policy(i: int) -> float:
-        """从状态到服务速率的映射"""
-        return policy_optimal[i]
-    
-    queue = ControlledMM1Queue(
-        arrival_rate=LAMBDA, 
-        service_rate_policy=service_rate_policy,
-        service_cost_func=q_func,
-        queue_cost_func=c_func,
-        max_customers=MAX_STATE
-    )
-    
-    queue.run(T=1e6)
-    print(queue.get_average_cost(T=1e6))
+    # 可视化
+    # fig = solver.plot_policy_and_value(J_pi, policy_pi)
+    plt.show()
