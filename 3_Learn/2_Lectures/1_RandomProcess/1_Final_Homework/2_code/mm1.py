@@ -14,12 +14,6 @@ Event = namedtuple('Event', ['time', 'type', 'data'])
 # type: 'arrival', 'departure', 'rate_change'
 
 class ControlledMM1Queue:
-    """
-    带控制策略的 M/M/1 排队系统
-    
-    状态：系统中的顾客数量 i(t)
-    动作：服务速率 μ(i) 仅依赖于当前顾客数
-    """
     
     def __init__(self, 
                  arrival_rate: float,
@@ -27,14 +21,6 @@ class ControlledMM1Queue:
                  service_cost_func: Callable[[float], float],
                  queue_cost_func: Callable[[int], float],
                  max_customers: int = None):
-        """
-        参数：
-        - arrival_rate: λ (到达速率)
-        - service_rate_policy: μ(i) -> float，从状态到服务速率的映射
-        - service_cost_func: q(μ) -> float，单位时间服务代价
-        - queue_cost_func: c(i) -> float，单位时间排队代价
-        - max_customers: 系统最大容量（None表示无限）
-        """
         self.arrival_rate = arrival_rate
         self.service_rate_policy = service_rate_policy
         self.service_cost_func = service_cost_func
@@ -94,7 +80,6 @@ class ControlledMM1Queue:
         """生成下一个离开事件（如果系统在忙）"""
         if self.num_customers > 0:
             service_rate = self.service_rate_policy(self.num_customers)
-            # **关键**：每次状态变化都重新采样！
             service_time = self._exponential_sample(service_rate)
             next_departure_time = self.current_time + service_time
             self._add_event(next_departure_time, 'departure')
@@ -154,10 +139,7 @@ class ControlledMM1Queue:
     
     def run(self, T: float) -> dict:
         """
-        运行模拟到时间 T
-        
-        返回：
-        - 历史记录字典
+        运行模拟
         """
         self.reset()
         
@@ -226,42 +208,3 @@ class ControlledMM1Queue:
             plt.show()
         
         return fig
-
-# 使用示例
-if __name__ == "__main__":
-    # 参数设置
-    LAMBDA = 2.0  # 到达速率
-    
-    # 控制策略：根据顾客数调整服务速率
-    def service_policy(num_customers: int) -> float:
-        """简单线性策略：顾客越多，服务越快（但代价更高）"""
-        if num_customers == 0:
-            return 0.0
-        return 1.0 + 0.5 * (num_customers - 1)
-    
-    # 代价函数
-    def service_cost(mu: float) -> float:
-        """服务代价：二次增长"""
-        return 0.5 * mu  ** 2
-    
-    def queue_cost(num_customers: int) -> float:
-        """排队代价：线性增长"""
-        return 2.0 * num_customers
-    
-    # 创建系统
-    queue = ControlledMM1Queue(
-        arrival_rate=LAMBDA,
-        service_rate_policy=service_policy,
-        service_cost_func=service_cost,
-        queue_cost_func=queue_cost
-    )
-    
-    # 运行模拟
-    history = queue.run(T=100.0)
-    
-    # 打印结果
-    avg_cost = queue.get_average_cost()
-    print(f"时间平均代价: {avg_cost:.2f}")
-    
-    # 可视化
-    fig = queue.plot_history(save=True)
